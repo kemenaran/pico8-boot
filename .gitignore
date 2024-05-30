@@ -1,0 +1,7 @@
+# Build products
+*.o
+*.gbc
+*.sym
+
+# Graphics are generated from PNG files
+*.2bpp
