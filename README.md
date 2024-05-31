@@ -13,7 +13,6 @@ To achieve the effect:
   _This allows to display 4 colors per 8x1 line (instead of 4 colors per 8x8 block)._
 - On each frame (vblank), the BG tile data is updated with the new pixels.
 
-
 Issues
 ======
 
@@ -72,3 +71,16 @@ Tools
 
 Palettes converter:
 - https://orangeglo.github.io/BGR555/
+
+Images conversio:
+- `convert 1.small.png +dither -colorspace Gray -colors 4 -depth 4 1.bw.png`
+- `rgbgfx original-gfx/4-colors/1.bw.png --unique-tiles --tilemap gfx/1.bw.tilemap --output gfx/1.bw.tileset.2bpp`
+
+
+TODO
+====
+
+- Display the first frame in DMG mode
+- Diplay all frames in DMG mode
+- Add frame-by-frame button
+- Add colors
