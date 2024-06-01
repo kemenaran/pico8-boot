@@ -46,8 +46,10 @@ EntryPoint:
   ; Initialize stack
   ld sp, wStackTop
 
-  ; Clear memory
-  call ClearHRAM
+  ; Clear HRAM
+  ld hl, _HRAM
+  ld bc, $FFFE - _HRAM
+  call ClearData
 
   ; Clear BG maps 0 and 1
   ld de, _SCRN0
@@ -101,7 +103,7 @@ MainLoop:
   ; Ensure we actually reached v-blank
 .ensureVBlank
   ld a, [rLY]
-  cp 144
+  cp $90 ; 144
   jp c, .ensureVBlank
 
   ; Increment the VI count
@@ -228,8 +230,8 @@ CopyFrameTilemap:
   ld e, a
   ld a, [hl]
   ld d, a
-  ; bc = count
-  ld hl, TilemapsSizeTable
+  ; bc = rows count
+  ld hl, TilemapRowsCountTable
   add hl, bc
   ld a, [hli]
   ld c, a
@@ -247,27 +249,6 @@ CopyFrameTilemap:
   ; Restore front VRAM bank
   ld a, [hTilesDataBankFront]
   ld [rVBK], a
-  ret
-
-; Copy a tilemap from de to hl (a rectangular region of VRAM)
-CopyTilemap:
-  ld a, [de]
-  ld [hli], a
-  inc de
-  dec bc
-  ; If reaching the end of a tilemap row, jump to next BG row
-  ld a, c
-  and (TILEMAP_WIDTH - 1)
-  jp nz, .rowEndIf
-  push bc
-  ld bc, (SCRN_VX_B - TILEMAP_WIDTH)
-  add hl, bc
-  pop bc
-  .rowEndIf
-  ; If not at the tilemap end yet, loop
-  ld a, b
-  or a, c
-  jp nz, CopyTilemap
   ret
 
 CopyBlackTile:
@@ -393,9 +374,9 @@ TilemapsTable:
 ._0 dw Frame1Tilemap
 ._1 dw Frame2Tilemap
 
-TilemapsSizeTable:
-._0 dw Frame1Tilemap.end - Frame1Tilemap
-._1 dw Frame2Tilemap.end - Frame2Tilemap
+TilemapRowsCountTable:
+._0 dw ((Frame1Tilemap.end - Frame1Tilemap) / TILEMAP_WIDTH)
+._1 dw ((Frame2Tilemap.end - Frame2Tilemap) / TILEMAP_WIDTH)
 
 Frame1Tilemap:
 INCBIN "gfx/1.bw.tilemap"

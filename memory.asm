@@ -54,12 +54,6 @@ DMAData:
   ld [rHDMA5], a ; transfer starts
   ret
 
-; Fill HRAM with 0
-ClearHRAM:
-  ld hl, _HRAM
-  ld bc, $FFFE - _HRAM
-  jp ClearData
-
 ; Copy c tiles from hl to de
 ; de must be in VRAM
 ;
@@ -82,3 +76,21 @@ CopyTiles:
   srl b
   srl b
   jp CopyData
+
+; Copy a tilemap of c rows from de to hl (a rectangular region of VRAM)
+CopyTilemap:
+  ; Unroll the loop: copy a row in a single pass
+REPT TILEMAP_WIDTH
+  ld a, [de]
+  ld [hli], a
+  inc de
+ENDR
+  ; End of the tilemap row: jump to next BG row
+  push de
+  ld de, (SCRN_VX_B - TILEMAP_WIDTH)
+  add hl, de
+  pop de
+  ; If not at the tilemap end yet, loop
+  dec c
+  jp nz, CopyTilemap
+  ret

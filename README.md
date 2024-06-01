@@ -91,9 +91,9 @@ TODO
 - ✅ Convert the ROM to GBC
 - ✅ Split loading into several stages (it seems 224 tiles can be loaded per vblank max)
 - DMA tiles and tilemap
-  - ✅ FIXME: align tilesets to $10 boundaries
-  - Copy to the proper front/backbuffer
-  - DMA only the allowed size
+  - ✅ Align tilesets to $10 boundaries
+  - ✅ Optimize tilemap load to fit a VBlank period
+  - DMA only the allowed size (split large tilesets in two)
 - Diplay all frames in non-colored mode
 - Add frame-by-frame button
 - Add colors
