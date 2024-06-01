@@ -2,6 +2,7 @@
 
 INCLUDE "hardware.inc"
 INCLUDE "header.asm"
+INCLUDE "table_jump.asm"
 INCLUDE "memory.asm"
 
 ; Tilemap layout, in tiles
@@ -10,7 +11,7 @@ DEF TILEMAP_TOP   EQU 1
 DEF TILEMAP_LEFT  EQU 2
 
 ; Number of frames in the animation
-DEF MAX_FRAMES_COUNT EQU 2
+DEF MAX_ANIMATION_FRAMES EQU 2
 
 EntryPoint:
   ; Switch CPU to double-speed if needed
@@ -80,7 +81,7 @@ EntryPoint:
   call LoadDefaultPalettes
 
   ; Load the first frame
-  call LoadFrame
+  call LoadFrame0
 
   ; Turn the LCD on
   ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BLK01
@@ -97,12 +98,9 @@ EntryPoint:
   ei
 
   ; Start the render loop
-  jp MainLoop.waitForNextVBlank
+  jp MainLoop.swapBuffers
 
 MainLoop:
-  call LoadNextFrame
-
-.waitForNextVBlank
   ; Stop the CPU until the next interrupt
   halt
   nop
@@ -112,10 +110,18 @@ MainLoop:
   cp 144
   jp c, .ensureVBlank
 
+  ; Increment the VI count
+  ld hl, hVICount
+  inc [hl]
+
+  ; Load the next data (this might or might not result in a new frame being ready)
+  call ExecuteDataLoading
+
   ; If the new frame is ready, swap buffers
   ld a, [hNeedsPresentingFrame]
   and a
   jp z, .swapBuffersEnd
+.swapBuffers
   xor a
   ld [hNeedsPresentingFrame], a
   call SwapBuffers
@@ -124,25 +130,59 @@ MainLoop:
   ; Loop
   jp MainLoop
 
-LoadNextFrame:
-  ; If we reached the last frame, return
+; Execute a data-loading step on each VBlank.
+;
+; The data-loading step may result in a new frame being ready to be presented,
+; or require additional loading steps during the next VBlank.
+;
+; This function must not execute longer than the VBlank duration.
+ExecuteDataLoading:
+  ; If we reached the last animation frame, return
   ld a, [hFrameIndex]
-  cp MAX_FRAMES_COUNT - 1
-  ret z
+  cp MAX_ANIMATION_FRAMES - 1
+  jp z, MainLoop
 
-  ; Increment the frame index
-  inc a
+  ; Execute the handler for the current VI
+  ld a, [hVICount]
+  call TableJump
+._0 dw LoadFrame0
+._1 dw LoadFrame1Tileset
+._2 dw LoadFrame1Tilemap
+._3 dw LoadFrame2
+; todo: add other frames
+
+; Frame 0 loads while the screen is turned off.
+; It can be loaded in one go.
+LoadFrame0:
+  xor a
   ld [hFrameIndex], a
-  ; fallthrough
 
-LoadFrame:
   call CopyFrameTileset
-  call CopyFrameTilemap
   call CopyBlackTile
+  call CopyFrameTilemap
+  ld a, 1
+  ld [hNeedsPresentingFrame], a
+  ret
+
+LoadFrame1Tileset:
+  ld hl, hFrameIndex
+  inc hl
+
+  call CopyFrameTileset
+  ret
+
+LoadFrame1Tilemap:
+  call CopyBlackTile
+  call CopyFrameTilemap
 
   ld a, 1
   ld [hNeedsPresentingFrame], a
+  ret
 
+LoadFrame2:
+  ld hl, hFrameIndex
+  inc hl
+  ; TODO
   ret
 
 CopyFrameTileset:
@@ -377,7 +417,10 @@ DEF wStackTop EQU $CFFF
 ; -------------------------------------------------------------------------------
 SECTION "HRAM", HRAM[$FF80]
 
-; Index of the frame being rendered
+; Number of vertical interrupts that occured
+hVICount: ds 1
+
+; Index of the animation frame being rendered
 ; (the frame being presented is the previous one)
 hFrameIndex: ds 1
 
