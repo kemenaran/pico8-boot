@@ -33,8 +33,52 @@ ClearData:
   jr nz, ClearData
   ret
 
+; Copy c * 16 bytes from hl to de
+; Destination must be in VRAM
+DMAData:
+  ; Mask the higher bit of the destination
+  ; (because HDMA destination is an offset relative to $8000)
+  ld a, $7F
+  and a, d
+  ld d, a
+  ; Configure HDMA
+  ld a, h
+  ld [rHDMA1], a
+  ld a, l
+  ld [rHDMA2], a
+  ld a, d
+  ld [rHDMA3], a
+  ld a, e
+  ld [rHDMA4], a
+  ld a, c
+  ld [rHDMA5], a ; transfer starts
+  ret
+
 ; Fill HRAM with 0
 ClearHRAM:
   ld hl, _HRAM
   ld bc, $FFFE - _HRAM
   jp ClearData
+
+; Copy c tiles from hl to de
+; de must be in VRAM
+;
+; HDMA is used if the LCD screen is enabled (regular loop otherwise)
+CopyTiles:
+  ld a, [rLCDC]
+  and LCDCF_ON
+  jp z, .noDMA
+.dma
+  jp DMAData
+.noDMA
+  ; bc = c * 16
+  ld b, c
+  sla c
+  sla c
+  sla c
+  sla c
+  srl b
+  srl b
+  srl b
+  srl b
+  jp CopyData

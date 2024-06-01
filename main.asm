@@ -2,8 +2,6 @@
 
 INCLUDE "hardware.inc"
 INCLUDE "header.asm"
-INCLUDE "table_jump.asm"
-INCLUDE "memory.asm"
 
 ; Tilemap layout, in tiles
 DEF TILEMAP_WIDTH EQU 16
@@ -80,7 +78,6 @@ EntryPoint:
   ; Load default DMG-on-CGB palettes
   call LoadDefaultPalettes
 
-  ; Load the first frame
   call LoadFrame0
 
   ; Turn the LCD on
@@ -97,9 +94,6 @@ EntryPoint:
   ldh [rIE], a
   ei
 
-  ; Start the render loop
-  jp MainLoop.swapBuffers
-
 MainLoop:
   ; Stop the CPU until the next interrupt
   halt
@@ -114,8 +108,10 @@ MainLoop:
   ld hl, hVICount
   inc [hl]
 
-  ; Load the next data (this might or might not result in a new frame being ready)
-  call ExecuteDataLoading
+  ; If we reached the last animation frame, return
+  ld a, [hFrameIndex]
+  cp MAX_ANIMATION_FRAMES
+  jp z, MainLoop
 
   ; If the new frame is ready, swap buffers
   ld a, [hNeedsPresentingFrame]
@@ -127,6 +123,9 @@ MainLoop:
   call SwapBuffers
 .swapBuffersEnd
 
+  ; Load the next data (this might or might not result in a new frame being ready)
+  call ExecuteDataLoading
+
   ; Loop
   jp MainLoop
 
@@ -137,11 +136,6 @@ MainLoop:
 ;
 ; This function must not execute longer than the VBlank duration.
 ExecuteDataLoading:
-  ; If we reached the last animation frame, return
-  ld a, [hFrameIndex]
-  cp MAX_ANIMATION_FRAMES - 1
-  jp z, MainLoop
-
   ; Execute the handler for the current VI
   ld a, [hVICount]
   call TableJump
@@ -166,7 +160,7 @@ LoadFrame0:
 
 LoadFrame1Tileset:
   ld hl, hFrameIndex
-  inc hl
+  inc [hl]
 
   call CopyFrameTileset
   ret
@@ -181,7 +175,7 @@ LoadFrame1Tilemap:
 
 LoadFrame2:
   ld hl, hFrameIndex
-  inc hl
+  inc [hl]
   ; TODO
   ret
 
@@ -202,9 +196,9 @@ CopyFrameTileset:
   ld l, e
   ; de = destination
   ld de, _VRAM
-  ; bc = count
+  ; bc = dma size
   push hl
-  ld hl, TilesetsSizeTable
+  ld hl, TilesetSizeTable
   add hl, bc
   ld a, [hli]
   ld c, a
@@ -215,7 +209,7 @@ CopyFrameTileset:
   ld a, [hTilesDataBankBack]
   ld [rVBK], a
   ; Copy
-  call CopyData
+  call CopyTiles
   ; Restore front VRAM bank
   ld a, [hTilesDataBankFront]
   ld [rVBK], a
@@ -364,6 +358,9 @@ SwapBuffers:
   set LCDCB_BG9C00, [hl]
   ret
 
+INCLUDE "table_jump.asm"
+INCLUDE "memory.asm"
+
 ; -------------------------------------------------------------------------------
 SECTION "Tile data", ROM0
 
@@ -371,13 +368,16 @@ TilesetsTable:
 ._0 dw Frame1Tiles
 ._1 dw Frame2Tiles
 
-TilesetsSizeTable:
-._0 dw Frame1Tiles.end - Frame1Tiles
-._1 dw Frame2Tiles.end - Frame2Tiles
+; Size of each tileset data (in tiles)
+TilesetSizeTable:
+._0 dw ((Frame1Tiles.end - Frame1Tiles) / 16)
+._1 dw ((Frame2Tiles.end - Frame2Tiles) / 16)
 
+ALIGN 4 ; Align to 16-bytes boundaries, for HDMA transfer
 Frame1Tiles:
 INCBIN "gfx/1.bw.tileset.2bpp"
   .end
+ALIGN 4 ; Align to 16-bytes boundaries, for HDMA transfer
 Frame2Tiles:
 INCBIN "gfx/2.bw.tileset.2bpp"
   .end

@@ -14,7 +14,7 @@ gfx_files = $(shell find ./gfx -type f -name '*.png')
 
 pico8-boot.gbc: main.o
 	rgblink -n $(@:.gbc=.sym) -o $@ $^
-	rgbfix --color-only --pad-value 0xFF --validate $@
+	rgbfix --color-only --mbc-type MBC5 --pad-value 0xFF --validate $@
 
 build: pico8-boot.gbc
 

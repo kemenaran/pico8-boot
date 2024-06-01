@@ -16,6 +16,9 @@ To achieve the effect:
 Issues
 ======
 
+- It takes a while to load the tileset and tilemap.
+ If needed, we can HDMA them during HBlank (one tile per scanline)
+
 - On the original boot animation, somes 8x1 lines feature 5 differents colors (4 colors + black backround). The GBC is limited to 4 colors per 8x1 line.
 - Although we can change the palette or tile attributes on each scanline, each 8x1 line would need to pick one of the 8 available palettes. So all 16 pixels blocks on a line would need to share 8 palettes.
 
@@ -85,10 +88,12 @@ TODO
 - ✅ Switch to DMG-on-GBC (but with double speed)
 - ✅ Why aren't the second frame tiles written to VRAM bank 1?
  (Because we're not in CGB compatible mode!)
-- Convert the ROM to GBC:
-  - palettes
-  - tiles-attributes
-- Split loading into several stages (it seems 224 tiles can be loaded per vblank max)
+- ✅ Convert the ROM to GBC
+- ✅ Split loading into several stages (it seems 224 tiles can be loaded per vblank max)
+- DMA tiles and tilemap
+  - ✅ FIXME: align tilesets to $10 boundaries
+  - Copy to the proper front/backbuffer
+  - DMA only the allowed size
 - Diplay all frames in non-colored mode
 - Add frame-by-frame button
 - Add colors
