@@ -9,10 +9,11 @@ CopyData:
   jr nz, CopyData
   ret
 
-; Fill bc bytes of the BG map with value in a
-FillBGMap:
-  ld   d, a
-  ld hl, _SCRN0
+; Fill bc bytes to de with value in a
+FillData:
+  push de
+  pop hl
+  ld d, a
 .loop
   ld  a, d
   ld [hli], a

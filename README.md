@@ -70,7 +70,7 @@ Tools
 =====
 
 Palettes converter:
-- https://orangeglo.github.io/BGR555/
+- https://orangeglo.github.io/BGR555/ (use Big Endian)
 
 Images conversio:
 - `convert 1.small.png +dither -colorspace Gray -colors 4 -depth 4 1.bw.png`
@@ -80,7 +80,15 @@ Images conversio:
 TODO
 ====
 
-- Display the first frame in DMG mode
-- Diplay all frames in DMG mode
+- ✅ Display the first frame in DMG mode
+- ✅ Implement double-buffering
+- ✅ Switch to DMG-on-GBC (but with double speed)
+- ✅ Why aren't the second frame tiles written to VRAM bank 1?
+ (Because we're not in CGB compatible mode!)
+- Convert the ROM to GBC:
+  - palettes
+  - tiles-attributes
+- Split loading into several stages (it seems 224 tiles can be loaded per vblank max)
+- Diplay all frames in non-colored mode
 - Add frame-by-frame button
 - Add colors

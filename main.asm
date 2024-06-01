@@ -4,10 +4,6 @@ INCLUDE "hardware.inc"
 INCLUDE "header.asm"
 INCLUDE "memory.asm"
 
-; Memory constants
-DEF TILES_DATA_0 EQU $8000
-DEF TILES_DATA_1 EQU $8800
-
 ; Tilemap layout, in tiles
 DEF TILEMAP_WIDTH EQU 16
 DEF TILEMAP_TOP   EQU 1
@@ -17,20 +13,6 @@ DEF TILEMAP_LEFT  EQU 2
 DEF MAX_FRAMES_COUNT EQU 2
 
 EntryPoint:
-  ; Shut down audio circuitry
-  ld a, 0
-  ld [rNR52], a
-
-  ; Do not turn the LCD off outside of VBlank
-.waitVBlank
-  ld a, [rLY]
-  cp 144
-  jp c, .waitVBlank
-
-  ; Turn the LCD off
-  ld a, 0
-  ld [rLCDC], a
-
   ; Switch CPU to double-speed if needed
   cp   BOOTUP_A_CGB ; running on Game Boy Color?
   jr   nz, .speedSwitchEnd
@@ -48,6 +30,20 @@ EntryPoint:
   stop
 .speedSwitchEnd
 
+  ; Shut down audio circuitry
+  ld a, 0
+  ld [rNR52], a
+
+  ; Do not turn the LCD off outside of VBlank
+.waitVBlank
+  ld a, [rLY]
+  cp 144
+  jp c, .waitVBlank
+
+  ; Turn the LCD off
+  ld a, 0
+  ld [rLCDC], a
+
   ; Initialize stack
   ld sp, wStackTop
 
@@ -55,13 +51,33 @@ EntryPoint:
   call ClearHRAM
 
   ; Clear BG maps 0 and 1
+  ld de, _SCRN0
   ld bc, _SRAM - _SCRN0
   ld a, $FF
-  call FillBGMap
+  call FillData
+
+  ; Clear attributes maps
+  ld a, 1
+  ld [rVBK], a
+  ; Clear Attr map 0 (load tiles from VRAM bank 0)
+  ld de, _SCRN0
+  ld bc, _SCRN1 - _SCRN0
+  ld a, %00000000
+  call FillData
+  ; Clear Attr map 1 (load tiles from VRAM bank 1)
+  ld de, _SCRN1
+  ld bc, _SRAM - _SCRN1
+  ld a, %00001000
+  call FillData
+  xor a
+  ld [rVBK], a
 
   ; Initialize double-buffering
   ; (first frame will be written to VRAM bank 0)
   call SwapBuffers.presentBufferB
+
+  ; Load default DMG-on-CGB palettes
+  call LoadDefaultPalettes
 
   ; Load the first frame
   call LoadFrame
@@ -96,18 +112,16 @@ MainLoop:
   cp 144
   jp c, .ensureVBlank
 
-  ; If the new frame is not ready, skip this frame, and wait for the next vblank interrupt
+  ; If the new frame is ready, swap buffers
   ld a, [hNeedsPresentingFrame]
   and a
-  jp z, .waitForNextVBlank
-
+  jp z, .swapBuffersEnd
   xor a
   ld [hNeedsPresentingFrame], a
-
-  ; Swap buffers
   call SwapBuffers
+.swapBuffersEnd
 
-  ; Start rendering a new frame
+  ; Loop
   jp MainLoop
 
 LoadNextFrame:
@@ -191,8 +205,15 @@ CopyFrameTilemap:
   ld a, [hBGMapAddressBack]
   ld h, a
   ld l, TILEMAP_TOP * 32 + TILEMAP_LEFT
+  ; Switch to VRAM bank 0
+  xor a
+  ld [rVBK], a
   ; Copy
-  jp CopyTilemap
+  call CopyTilemap
+  ; Restore front VRAM bank
+  ld a, [hTilesDataBankFront]
+  ld [rVBK], a
+  ret
 
 ; Copy a tilemap from de to hl (a rectangular region of VRAM)
 CopyTilemap:
@@ -219,10 +240,48 @@ CopyBlackTile:
   ; hl = origin
   ld hl, BlackTile
   ; de = destination (last tile of tiles backbuffer)
-  ld de, TILES_DATA_0 + $1000 - 16
-.altBufferEndIf
+  ld de, $8000 + $1000 - 16
+  ; bc = size
   ld bc, BlackTile.end - BlackTile
-  jp CopyData
+  ; Switch to back VRAM bank
+  ld a, [hTilesDataBankBack]
+  ld [rVBK], a
+  ; Copy
+  call CopyData
+  ; Restore front VRAM bank
+  ld a, [hTilesDataBankFront]
+  ld [rVBK], a
+  ret
+
+; 8 identical DMG-like palettes
+DefaultBGPalettes:
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  .end
+
+LoadDefaultPalettes:
+  ld hl, DefaultBGPalettes
+  call CopyBGPalettes
+  ret
+
+ ; Writes $40 bytes located at HL to the BG palettes.
+ ; Only available during V-Blank.
+ CopyBGPalettes:
+  ld a, BCPSF_AUTOINC | 0
+  ldh [rBGPI], a
+  ld b, DefaultBGPalettes.end - DefaultBGPalettes
+.loop
+  ld a, [hli]
+  ldh [rBGPD] ,a
+  dec b
+  jr nz, .loop
+  ret
 
 SwapBuffers:
   ld a, [hTilesDataBankFront]
