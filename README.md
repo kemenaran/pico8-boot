@@ -27,7 +27,7 @@ Clues :
 - For more colors per 8x1 block: add sprites to work around this
 - Use the GBC screen remanence to display more colors
 - Change the Y-scroll during scanline rendering, for more color (https://github.com/LIJI32/GBVideoPlayer/blob/master/How%20It%20Works.md)
--
+- Rotate the original artwork by 1px every line, and back-correct by changing the X-scroll of 1px during HBLANK (so that every tile has roughly the same palette, which would allow for better )
 
 Ressources
 ==========
@@ -93,7 +93,11 @@ TODO
 - DMA tiles and tilemap
   - ✅ Align tilesets to $10 boundaries
   - ✅ Optimize tilemap load to fit a VBlank period
-  - DMA only the allowed size (split large tilesets in two)
+  - ✅ DMA only the allowed size (split large tilesets in two)
+  - Rewrite tileset datastructures as structs (instead of several arrays)
 - Diplay all frames in non-colored mode
 - Add frame-by-frame button
+- Write a script to output color statistics about an image: color count per picture/per tile/per 8x2 bloc
+- Write a script to rotate the image by 1px every line, and see if the stats are better
+- Write a script to output a new image with reduced colors and/or tiles that can be displayed by the GBA
 - Add colors

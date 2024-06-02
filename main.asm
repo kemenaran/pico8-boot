@@ -111,7 +111,7 @@ MainLoop:
   inc [hl]
 
   ; If we reached the last animation frame, return
-  ld a, [hFrameIndex]
+  ld a, [hFrame]
   cp MAX_ANIMATION_FRAMES
   jp z, MainLoop
 
@@ -123,9 +123,11 @@ MainLoop:
   xor a
   ld [hNeedsPresentingFrame], a
   call SwapBuffers
+  call IncrementAnimationFrameIndex
 .swapBuffersEnd
 
-  ; Load the next data (this might or might not result in a new frame being ready)
+  ; Load the next data
+  ; (this might or might not result in a new frame being ready)
   call ExecuteDataLoading
 
   ; Loop
@@ -142,28 +144,29 @@ ExecuteDataLoading:
   ld a, [hVICount]
   call TableJump
 ._0 dw LoadFrame0
-._1 dw LoadFrame1Tileset
-._2 dw LoadFrame1Tilemap
-._3 dw LoadFrame2
+._1 dw LoadFrame1TilesetChunk1
+._2 dw LoadFrame1TilesetChunk2
+._3 dw LoadFrame1Tilemap
+._4 dw LoadFrame2
 ; todo: add other frames
 
 ; Frame 0 loads while the screen is turned off.
 ; It can be loaded in one go.
 LoadFrame0:
-  xor a
-  ld [hFrameIndex], a
-
   call CopyFrameTileset
   call CopyBlackTile
   call CopyFrameTilemap
-  ld a, 1
-  ld [hNeedsPresentingFrame], a
+
+  call AnimationFrameReady
   ret
 
-LoadFrame1Tileset:
-  ld hl, hFrameIndex
+LoadFrame1TilesetChunk1:
+  call CopyFrameTileset
+  ld hl, hFrameStage
   inc [hl]
+  ret
 
+LoadFrame1TilesetChunk2:
   call CopyFrameTileset
   ret
 
@@ -171,42 +174,44 @@ LoadFrame1Tilemap:
   call CopyBlackTile
   call CopyFrameTilemap
 
-  ld a, 1
-  ld [hNeedsPresentingFrame], a
+  call AnimationFrameReady
   ret
 
 LoadFrame2:
-  ld hl, hFrameIndex
-  inc [hl]
   ; TODO
   ret
 
 CopyFrameTileset:
-  ; bc = hFrameIndex * 2
+  ; bc = (hFrame + hFrameStage) * 2
   ld b, 0
-  ld a, [hFrameIndex]
+  ld a, [hFrame]
+  ld hl, hFrameStage
+  add a, [hl]
   sla a
   ld c, a
-  ; hl = source
-  ld hl, TilesetsTable
+  ; hl = TilesetSourcesTable[bc] (source)
+  ld hl, TilesetSourcesTable
+  add hl, bc
+  ld a, [hli]
+  ld e, a
+  ld a, [hl]
+  ld h, a
+  ld l, e
+  ; de = TilesetDestinationsTable (destination)
+  push hl ; save source address
+  ld hl, TilesetDestinationsTable
   add hl, bc
   ld a, [hli]
   ld e, a
   ld a, [hl]
   ld d, a
-  ld h, d
-  ld l, e
-  ; de = destination
-  ld de, _VRAM
-  ; bc = dma size
-  push hl
-  ld hl, TilesetSizeTable
+  ld hl, TilesetSizesTable
   add hl, bc
   ld a, [hli]
   ld c, a
   ld a, [hl]
   ld b, a
-  pop hl
+  pop hl ; restore source address
   ; Switch to back VRAM bank
   ld a, [hTilesDataBankBack]
   ld [rVBK], a
@@ -218,9 +223,9 @@ CopyFrameTileset:
   ret
 
 CopyFrameTilemap:
-  ; bc = hFrameIndex * 2
+  ; bc = hFrame * 2
   ld b, 0
-  ld a, [hFrameIndex]
+  ld a, [hFrame]
   sla a
   ld c, a
   ; de = source
@@ -268,6 +273,21 @@ CopyBlackTile:
   ld [rVBK], a
   ret
 
+AnimationFrameReady:
+  ; Mark the frame as ready for presentation
+  ld a, 1
+  ld [hNeedsPresentingFrame], a
+  ret
+
+IncrementAnimationFrameIndex:
+  ; Increment the animation frame index
+  ld hl, hFrame
+  inc [hl]
+  ; Reset the loading stage
+  xor a
+  ld [hFrameStage], a
+  ret
+
 ; 8 identical DMG-like palettes
 DefaultBGPalettes:
   dw $7FFF, $5EF7, $3DEF, $0000
@@ -309,7 +329,7 @@ SwapBuffers:
   ld [hTilesDataBankBack], a
   xor a
   ld [hTilesDataBankFront], a
-  ; Switch VRAM bank
+  ; Switch to front VRAM bank
   ld [rVBK], a
   ; BG map is presented from $9800
   ld a, HIGH(_SCRN0)
@@ -327,7 +347,7 @@ SwapBuffers:
   ld [hTilesDataBankBack], a
   ld a, 1
   ld [hTilesDataBankFront], a
-  ; Switch VRAM bank
+  ; Switch to front VRAM bank
   ld [rVBK], a
   ; BG map is presented from $9C00
   ld a, HIGH(_SCRN1)
@@ -345,20 +365,36 @@ INCLUDE "memory.asm"
 ; -------------------------------------------------------------------------------
 SECTION "Tile data", ROM0
 
-TilesetsTable:
-._0 dw Frame1Tiles
-._1 dw Frame2Tiles
+DEF TILESET_1_CHUNK_1_SIZE EQUS "((Frame1Tiles.end - Frame1Tiles) / 16)"
+DEF TILESET_2_CHUNK_1_SIZE EQUS "120" ; split tileset2 in two batches - the first is 120 tiles
+DEF TILESET_2_CHUNK_2_SIZE EQUS "((Frame2Tiles.end - Frame2Tiles) / 16) - TILESET_2_CHUNK_1_SIZE"
+
+; Tileset source addresses in ROM
+; Indexed by hFrame + hFrameStage
+TilesetSourcesTable:
+._0   dw Frame1Tiles
+._1_0 dw Frame2Tiles
+._1_1 dw Frame2Tiles + TILESET_2_CHUNK_1_SIZE * 16
+
+; Tileset destination addresses in VRAM
+; Indexed by hFrame + hFrameStage
+TilesetDestinationsTable:
+._0   dw _VRAM
+._1_0 dw _VRAM
+._1_1 dw _VRAM + TILESET_2_CHUNK_1_SIZE * 16
 
 ; Size of each tileset data (in tiles)
-TilesetSizeTable:
-._0 dw ((Frame1Tiles.end - Frame1Tiles) / 16)
-._1 dw ((Frame2Tiles.end - Frame2Tiles) / 16)
+; Indexed by hFrame + hFrameStage
+TilesetSizesTable:
+._0   dw TILESET_1_CHUNK_1_SIZE
+._1_0 dw TILESET_2_CHUNK_1_SIZE
+._1_1 dw TILESET_2_CHUNK_2_SIZE
 
 ALIGN 4 ; Align to 16-bytes boundaries, for HDMA transfer
 Frame1Tiles:
 INCBIN "gfx/1.bw.tileset.2bpp"
   .end
-ALIGN 4 ; Align to 16-bytes boundaries, for HDMA transfer
+ALIGN 4
 Frame2Tiles:
 INCBIN "gfx/2.bw.tileset.2bpp"
   .end
@@ -370,10 +406,14 @@ BlackTile:
 ; -------------------------------------------------------------------------------
 SECTION "Tilemap", ROM0
 
+; Tilemap source addresses in ROM
+; Indexed by hFrame
 TilemapsTable:
 ._0 dw Frame1Tilemap
 ._1 dw Frame2Tilemap
 
+; Number of row of each tilemap
+; Indexed by hFrame
 TilemapRowsCountTable:
 ._0 dw ((Frame1Tilemap.end - Frame1Tilemap) / TILEMAP_WIDTH)
 ._1 dw ((Frame2Tilemap.end - Frame2Tilemap) / TILEMAP_WIDTH)
@@ -403,7 +443,10 @@ hVICount: ds 1
 
 ; Index of the animation frame being rendered
 ; (the frame being presented is the previous one)
-hFrameIndex: ds 1
+hFrame: ds 1
+
+; Index of the loading stage of the animation frame being rendered
+hFrameStage: ds 1
 
 ; Whether there's a frame ready to be presented
 hNeedsPresentingFrame: ds 1
