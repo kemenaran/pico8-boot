@@ -143,12 +143,17 @@ ExecuteDataLoading:
   ; Execute the handler for the current VI
   ld a, [hVICount]
   call TableJump
-._0 dw LoadFrame0
-._1 dw LoadFrame1TilesetChunk1
-._2 dw LoadFrame1TilesetChunk2
-._3 dw LoadFrame1Tilemap
-._4 dw LoadFrame2
+  dw LoadFrame0
+  dw LoadFrame1TilesetChunk1
+  dw LoadFrame1TilesetChunk2
+  dw LoadFrame1Tilemap
+  dw Delay
+  dw PresentFrame1
+  dw LoadFrame2
 ; todo: add other frames
+
+Delay:
+  ret
 
 ; Frame 0 loads while the screen is turned off.
 ; It can be loaded in one go.
@@ -173,9 +178,10 @@ LoadFrame1TilesetChunk2:
 LoadFrame1Tilemap:
   call CopyBlackTile
   call CopyFrameTilemap
-
-  call AnimationFrameReady
   ret
+
+PresentFrame1:
+  call AnimationFrameReady
 
 LoadFrame2:
   ; TODO
