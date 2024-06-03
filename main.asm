@@ -4,12 +4,13 @@ INCLUDE "hardware.inc"
 INCLUDE "header.asm"
 
 ; Tilemap layout, in tiles
-DEF TILEMAP_WIDTH EQU 16
-DEF TILEMAP_TOP   EQU 1
-DEF TILEMAP_LEFT  EQU 2
+DEF TILEMAP_WIDTH  EQU 16
+DEF TILEMAP_HEIGHT EQU 16
+DEF TILEMAP_TOP    EQU 1
+DEF TILEMAP_LEFT   EQU 2
 
 ; Number of frames in the animation
-DEF MAX_ANIMATION_FRAMES EQU 4
+DEF MAX_ANIMATION_FRAMES EQU 5
 
 EntryPoint:
   ; Switch CPU to double-speed if needed
@@ -150,19 +151,20 @@ ExecuteDataLoading:
   dw LoadFrame1TilesetChunk1
   dw LoadFrame1TilesetChunk2
   dw LoadFrame1Tilemap
-  dw Delay
   dw PresentFrame
   dw LoadFrame2TilesetChunk1
   dw LoadFrame2TilesetChunk2
   dw LoadFrame2Tilemap
-  dw Delay
   dw PresentFrame
   dw LoadFrame3TilesetChunk1
   dw LoadFrame3TilesetChunk2
   dw LoadFrame3Tilemap
-  dw Delay
   dw PresentFrame
-  dw LoadFrame4
+  dw LoadFrame4TilesetChunk1
+  dw LoadFrame4TilesetChunk2
+  dw LoadFrame4Tilemap
+  dw PresentFrame
+  dw LoadFrame5
 ; todo: add other frames
 
 ; Do nothing during this VBlank interrupt
@@ -224,7 +226,22 @@ LoadFrame3Tilemap:
   call CopyFrameTilemap
   ret
 
-LoadFrame4:
+LoadFrame4TilesetChunk1:
+  call CopyTilesetForFrameStage
+  ret
+
+LoadFrame4TilesetChunk2:
+  ld hl, hFrameStage
+  inc [hl]
+  call CopyTilesetForFrameStage
+  ret
+
+LoadFrame4Tilemap:
+  call CopyBlackTile
+  call CopyFrameTilemap
+  ret
+
+LoadFrame5:
   ; TODO
   ret
 
@@ -269,12 +286,8 @@ CopyFrameTilemap:
   ld a, [hl]
   ld d, a
   ; bc = rows count
-  ld hl, TilemapRowsCountTable
-  add hl, bc
-  ld a, [hli]
-  ld c, a
-  ld a, [hl]
-  ld b, a
+  ld b, 0
+  ld c, TILEMAP_HEIGHT
   ; hl = destination
   ld a, [hBGMapAddressBack]
   ld h, a
@@ -391,7 +404,32 @@ INCLUDE "table_jump.asm"
 INCLUDE "memory.asm"
 
 ; -------------------------------------------------------------------------------
-SECTION "Tile data", ROM0
+SECTION "Tilemap", ROM0
+
+; Tilemap source addresses in ROM
+; Indexed by hFrame
+TilemapsTable:
+._0 dw $0000 ; plain black
+._1 dw Frame1Tilemap
+._2 dw Frame2Tilemap
+._3 dw Frame3Tilemap
+._4 dw Frame4Tilemap
+
+Frame1Tilemap:
+INCBIN "gfx/1.bw.tilemap"
+  .end
+Frame2Tilemap:
+INCBIN "gfx/2.bw.tilemap"
+  .end
+Frame3Tilemap:
+INCBIN "gfx/3.bw.tilemap"
+  .end
+Frame4Tilemap:
+INCBIN "gfx/4.bw.tilemap"
+  .end
+
+; -------------------------------------------------------------------------------
+SECTION "Tile data", ROMX, BANK[$01]
 
 ; Addresses of individual tilestruct definitions
 ; Indexed by hFrame * 2 + hFrameStage
@@ -404,6 +442,8 @@ TilesetDefinitionsTable:
 ._2_1 dw TilesetDefinitionFrame2Chunk2
 ._3_0 dw TilesetDefinitionFrame3Chunk1
 ._3_1 dw TilesetDefinitionFrame3Chunk2
+._4_0 dw TilesetDefinitionFrame4Chunk1
+._4_1 dw TilesetDefinitionFrame4Chunk2
 
 DEF TILESET_1_CHUNKS_COUNT EQUS "(((Frame1Tiles.end - Frame1Tiles) / 16) / 2)"
 
@@ -442,6 +482,18 @@ TilesetDefinitionFrame3Chunk2:
 .dest   dw _VRAM + TILESET_3_CHUNKS_COUNT * 16
 .count  db TILESET_3_CHUNKS_COUNT
 
+DEF TILESET_4_CHUNKS_COUNT EQUS "(((Frame4Tiles.end - Frame4Tiles) / 16) / 2)"
+
+TilesetDefinitionFrame4Chunk1:
+.source dw Frame4Tiles
+.dest   dw _VRAM
+.count  db TILESET_4_CHUNKS_COUNT
+
+TilesetDefinitionFrame4Chunk2:
+.source dw Frame4Tiles + TILESET_4_CHUNKS_COUNT * 16
+.dest   dw _VRAM + TILESET_4_CHUNKS_COUNT * 16
+.count  db TILESET_4_CHUNKS_COUNT
+
 TilesetDefinitionBlackTile:
 .source dw BlackTile
 .dest   dw _VRAM + $1000 - 16 ; last tile of tiles data memory
@@ -463,37 +515,13 @@ INCBIN "gfx/3.bw.tileset.2bpp"
   .end
 
 ALIGN 4
+Frame4Tiles:
+INCBIN "gfx/4.bw.tileset.2bpp"
+  .end
+
+ALIGN 4
 BlackTile:
   db $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
-  .end
-
-; -------------------------------------------------------------------------------
-SECTION "Tilemap", ROM0
-
-; Tilemap source addresses in ROM
-; Indexed by hFrame
-TilemapsTable:
-._0 dw $0000 ; plain black
-._1 dw Frame1Tilemap
-._2 dw Frame2Tilemap
-._3 dw Frame3Tilemap
-
-; Number of row of each tilemap
-; Indexed by hFrame
-TilemapRowsCountTable:
-._0 dw $0000
-._1 dw ((Frame1Tilemap.end - Frame1Tilemap) / TILEMAP_WIDTH)
-._2 dw ((Frame2Tilemap.end - Frame2Tilemap) / TILEMAP_WIDTH)
-._3 dw ((Frame3Tilemap.end - Frame3Tilemap) / TILEMAP_WIDTH)
-
-Frame1Tilemap:
-INCBIN "gfx/1.bw.tilemap"
-  .end
-Frame2Tilemap:
-INCBIN "gfx/2.bw.tilemap"
-  .end
-Frame3Tilemap:
-INCBIN "gfx/3.bw.tilemap"
   .end
 
 ; -------------------------------------------------------------------------------
