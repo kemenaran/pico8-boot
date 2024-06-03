@@ -8,6 +8,8 @@ DEF TILEMAP_WIDTH  EQU 16
 DEF TILEMAP_HEIGHT EQU 16
 DEF TILEMAP_TOP    EQU 1
 DEF TILEMAP_LEFT   EQU 2
+DEF ATTRMAP_WIDTH  EQU 20
+DEF ATTRMAP_HEIGHT EQU 18
 
 ; Number of frames in the animation
 DEF MAX_ANIMATION_FRAMES EQU 6
@@ -56,19 +58,22 @@ EntryPoint:
   call ClearBGMap0
   call ClearBGMap1
 
-  ; Clear attributes maps
-  ld a, %00000000 ; load tiles from VRAM bank 0
-  call FillAttrMap0
-  ld a, %00001000 ; load tiles from VRAM bank 1
-  call FillAttrMap1
+  ; Fill initial attributes maps
+  ld de, DefaultAttrmapBank0
+  ld hl, _SCRN0
+  ld bc, ATTRMAP_HEIGHT
+  call CopyAttrmap
+
+  ld de, DefaultAttrmapBank1
+  ld hl, _SCRN1
+  ld bc, ATTRMAP_HEIGHT
+  call CopyAttrmap
 
   ; Initialize double-buffering
   ; (first frame will be written to VRAM bank 0)
   call SwapBuffers.presentBufferB
 
-  ; Load default DMG-on-CGB palettes
-  call LoadDefaultPalettes
-
+  ; Load a fully black palette for the first frame
   call LoadFrame0
 
   ; Turn the LCD on
@@ -139,7 +144,7 @@ ExecuteDataLoading:
   dw LoadFrame1TilesetChunk1
   dw LoadFrame1TilesetChunk2
   dw LoadFrame1Tilemap
-  dw PresentFrame
+  dw PresentFrame1
   dw LoadFrame2TilesetChunk1
   dw LoadFrame2TilesetChunk2
   dw LoadFrame2Tilemap
@@ -161,6 +166,8 @@ ExecuteDataLoading:
   dw Delay
   dw PresentFrame
   dw Delay ; should never be called
+  dw Delay ; should never be called
+  dw Delay ; should never be called
 
 ; Do nothing during this VBlank interrupt
 Delay:
@@ -170,9 +177,9 @@ Delay:
 PresentFrame:
   jp AnimationFrameReady
 
-; Frame 0 loads while the screen is turned off.
 LoadFrame0:
-  ; Frame 0 is plain black, and the tilemap is aready cleared: nothing else to do
+  ld hl, BlackPalettes
+  call CopyBGPalettes
   call AnimationFrameReady
   ret
 
@@ -191,7 +198,17 @@ LoadFrame1Tilemap:
   call CopyFrameTilemap
   ret
 
+PresentFrame1:
+  call AnimationFrameReady
+  ret
+
 LoadFrame2TilesetChunk1:
+  ; !!!!!
+  ; FIXME: this should be called the frame before
+  ld hl, Pico8Palettes
+  call CopyBGPalettes
+  ; !!!!!!
+
   call CopyTilesetForFrameStage
   ret
 
@@ -340,36 +357,6 @@ IncrementAnimationFrame:
   ld [hFrameStage], a
   ret
 
-; 8 identical DMG-like palettes
-DefaultBGPalettes:
-  dw $7FFF, $5EF7, $3DEF, $0000
-  dw $7FFF, $5EF7, $3DEF, $0000
-  dw $7FFF, $5EF7, $3DEF, $0000
-  dw $7FFF, $5EF7, $3DEF, $0000
-  dw $7FFF, $5EF7, $3DEF, $0000
-  dw $7FFF, $5EF7, $3DEF, $0000
-  dw $7FFF, $5EF7, $3DEF, $0000
-  dw $7FFF, $5EF7, $3DEF, $0000
-  .end
-
-LoadDefaultPalettes:
-  ld hl, DefaultBGPalettes
-  call CopyBGPalettes
-  ret
-
- ; Writes $40 bytes located at HL to the BG palettes.
- ; Only available during V-Blank.
- CopyBGPalettes:
-  ld a, BCPSF_AUTOINC | 0
-  ldh [rBGPI], a
-  ld b, DefaultBGPalettes.end - DefaultBGPalettes
-.loop
-  ld a, [hli]
-  ldh [rBGPD] ,a
-  dec b
-  jr nz, .loop
-  ret
-
 SwapBuffers:
   ld a, [hTilesDataBankFront]
   and a
@@ -416,7 +403,7 @@ INCLUDE "memory.asm"
 INCLUDE "gfx.asm"
 
 ; -------------------------------------------------------------------------------
-SECTION "Tileset definitions", ROM0
+; Tileset definitions
 
 ; Addresses of individual tilestruct definitions
 ; Indexed by hFrame * 2 + hFrameStage
@@ -512,7 +499,7 @@ TilesetDefinitionBlackTile:
 .count       db (BlackTile.end - BlackTile) / 16
 
 ; -------------------------------------------------------------------------------
-SECTION "Tilemaps", ROM0
+; "Tilemaps"
 
 ; Tilemap source addresses in ROM
 ; Indexed by hFrame
@@ -543,6 +530,51 @@ INCBIN "gfx/5.bw.tilemap"
 Frame6Tilemap:
 INCBIN "gfx/6.bw.tilemap"
   .end
+
+; -------------------------------------------------------------------------------
+; Attrmaps
+
+DefaultAttrmapBank0:
+  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  db 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0
+  db 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 0
+  db 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 0, 0
+  db 0, 0, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 1, 0, 0
+  db 0, 0, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 1, 1, 0, 0
+  db 0, 0, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 1, 1, 2, 0, 0
+  db 0, 0, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 1, 1, 2, 2, 0, 0
+  db 0, 0, 3, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 1, 1, 2, 2, 3, 0, 0
+  db 0, 0, 4, 4, 5, 5, 6, 6, 7, 7, 0, 0, 1, 1, 2, 2, 3, 3, 0, 0
+  db 0, 0, 4, 5, 5, 6, 6, 7, 7, 0, 0, 1, 1, 2, 2, 3, 3, 4, 0, 0
+  db 0, 0, 5, 5, 6, 6, 7, 7, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 0, 0
+  db 0, 0, 5, 6, 6, 7, 7, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 0, 0
+  db 0, 0, 6, 6, 7, 7, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 0, 0
+  db 0, 0, 6, 7, 7, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 0, 0
+  db 0, 0, 7, 7, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 0, 0
+  db 0, 0, 7, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 0, 0
+  db 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+  .end
+
+DEF AB1 EQU %00001000
+DefaultAttrmapBank1:
+  db AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 6, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 7, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 7, AB1 | 0, AB1 | 0, AB1 | 1, AB1 | 1, AB1 | 2, AB1 | 2, AB1 | 3, AB1 | 3, AB1 | 4, AB1 | 4, AB1 | 5, AB1 | 5, AB1 | 6, AB1 | 6, AB1 | 7, AB1 | 0, AB1 | 0
+  db AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0, AB1 | 0
 
 ; -------------------------------------------------------------------------------
 SECTION "Tilesets - frame 1-4", ROMX, BANK[$01]

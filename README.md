@@ -29,46 +29,6 @@ Clues :
 - Change the Y-scroll during scanline rendering, for more color (https://github.com/LIJI32/GBVideoPlayer/blob/master/How%20It%20Works.md)
 - Rotate the original artwork by 1px every line, and back-correct by changing the X-scroll of 1px during HBLANK (so that every tile has roughly the same palette, which would allow for better )
 
-Ressources
-==========
-
-Pico 8 palette :
-0: #000000
-1: #ff004d
-2: #7e2553
-3: #1d2b53
-4: #4f4843
-5: #ab5236
-6: #83769c
-7: #008751
-8: #ffa300
-9: #29adff
-10: #c2c3c7
-11: #00e756
-12: #ffe727
-13: #fff1e8
-14: #ffffff
-15: #000000
-
-As GBC bytes:
-dw $0000
-dw $1F24
-dw $8F28
-dw $A328
-dw $2921
-dw $5519
-dw $D04D
-dw $002A
-dw $9F02
-dw $A57E
-dw $1863
-dw $802B
-dw $9F13
-dw $DF77
-dw $FF7F
-dw $0000
-
-
 Tools
 =====
 
@@ -97,8 +57,10 @@ TODO
   - ✅ Rewrite tileset datastructures as structs (instead of several arrays)
 - ✅ First frame is black
 - ✅ Diplay all frames in non-colored mode
-- Add frame-by-frame button
+- ✅ Add basic colors
+- Fix order of data loading and buffer swap (to avoid a flash of colors)
+- Color-correct the pico8 colors
 - Write a script to output color statistics about an image: color count per picture/per tile/per 8x2 bloc
 - Write a script to rotate the image by 1px every line, and see if the stats are better
 - Write a script to output a new image with reduced colors and/or tiles that can be displayed by the GBA
-- Add colors
+

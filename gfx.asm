@@ -10,31 +10,6 @@ ClearBGMap1:
   ld a, $FF
   jp FillData
 
-; Fill BG attributes map 0 with value in a
-FillAttrMap0:
-  push af
-  ld a, 1
-  ld [rVBK], a
-  pop af
-  ld de, _SCRN0
-  ld bc, _SCRN1 - _SCRN0
-  call FillData
-  ld a, 0
-  ld [rVBK], a
-  ret
-
-; Clear BG attributes map 1 with value in a
-FillAttrMap1:
-  ld a, 1
-  ld [rVBK], a
-  ld de, _SCRN1
-  ld bc, _SRAM - _SCRN1
-  ld a, %00001000
-  call FillData
-  xor a
-  ld [rVBK], a
-  ret
-
 ; Copy a tileset to VRAM, from a tileset definition in hl.
 ;
 ; The definition data format is:
@@ -107,18 +82,104 @@ CopyTileset:
 
 ; Copy a tilemap of c rows from de to hl (a rectangular region of VRAM)
 CopyTilemap:
+.loop
   ; Unroll the loop: copy a row in a single pass
 REPT TILEMAP_WIDTH
   ld a, [de]
   ld [hli], a
   inc de
 ENDR
-  ; End of the tilemap row: jump to next BG row
+  ; End of the row: jump to next BG row
   push de
   ld de, (SCRN_VX_B - TILEMAP_WIDTH)
   add hl, de
   pop de
-  ; If not at the tilemap end yet, loop
+  ; If not at the end yet, loop
   dec c
-  jp nz, CopyTilemap
+  jp nz, .loop
+  ret
+
+; Copy an attributes map of c rows from de to hl (a rectangular region of VRAM)
+CopyAttrmap:
+  ld a, 1
+  ld [rVBK], a
+.loop
+  ; Unroll the loop: copy a row in a single pass
+REPT ATTRMAP_WIDTH
+  ld a, [de]
+  ld [hli], a
+  inc de
+ENDR
+  ; End of the row: jump to next BG row
+  push de
+  ld de, (SCRN_VX_B - ATTRMAP_WIDTH)
+  add hl, de
+  pop de
+  ; If not at the end yet, loop
+  dec c
+  jp nz, .loop
+  ret
+
+; Pico8 colors
+DEF C_BLACK       EQU $0000 ; #000000
+DEF C_DARK_BLUE   EQU $28A3 ; #1D2B53
+DEF C_DARK_PURPLE EQU $288F ; #7E2553
+DEF C_DARK_GREEN  EQU $2A00 ; #008751
+DEF C_BROWN       EQU $1955 ; #ab5236
+DEF C_DARK_GREY   EQU $254B ; #5F574F
+DEF C_LIGHT_GREY  EQU $6318 ; #C2C3C7
+DEF C_WHITE       EQU $77DF ; #FFF1E8
+DEF C_RED         EQU $241F ; #FF004D
+DEF C_ORANGE      EQU $029F ; #FFA300
+DEF C_YELLOW      EQU $139F ; #FFEC27
+DEF C_GREEN       EQU $1B80 ; #00E436
+DEF C_BLUE        EQU $7EA5 ; #29ADFF
+DEF C_LAVENDER    EQU $4DD0 ; #83769C
+DEF C_PINK        EQU $55DF ; #FF77A8
+DEF C_LIGHT_PEACH EQU $573F ; #FFCCAA
+
+; Fully black palettes
+BlackPalettes:
+  dw $0000, $0000, $0000, $0000
+  dw $0000, $0000, $0000, $0000
+  dw $0000, $0000, $0000, $0000
+  dw $0000, $0000, $0000, $0000
+  dw $0000, $0000, $0000, $0000
+  dw $0000, $0000, $0000, $0000
+  dw $0000, $0000, $0000, $0000
+  dw $0000, $0000, $0000, $0000
+
+; 8 identical DMG-like palettes
+DMGPalettes:
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+  dw $7FFF, $5EF7, $3DEF, $0000
+
+; A pico8-like set of 8 palettes
+Pico8Palettes:
+  dw C_RED, C_ORANGE, C_DARK_BLUE, C_BLACK
+  dw C_ORANGE, C_YELLOW, C_DARK_PURPLE, C_BLACK
+  dw C_YELLOW, C_GREEN, C_DARK_GREEN, C_BLACK
+  dw C_GREEN, C_BLUE, C_BROWN, C_BLACK
+  dw C_BLUE, C_LAVENDER, C_DARK_GREY, C_BLACK
+  dw C_LAVENDER, C_PINK, C_LIGHT_GREY, C_BLACK
+  dw C_PINK, C_LIGHT_PEACH, C_WHITE, C_BLACK
+  dw C_LIGHT_PEACH, C_RED, C_DARK_PURPLE, C_BLACK
+
+; Writes $40 bytes located at HL to the BG palettes.
+; Only available during V-Blank.
+CopyBGPalettes:
+  ld a, BCPSF_AUTOINC | 0
+  ldh [rBGPI], a
+  ld b, 64
+.loop
+  ld a, [hli]
+  ldh [rBGPD] ,a
+  dec b
+  jr nz, .loop
   ret
