@@ -9,7 +9,7 @@ DEF TILEMAP_TOP   EQU 1
 DEF TILEMAP_LEFT  EQU 2
 
 ; Number of frames in the animation
-DEF MAX_ANIMATION_FRAMES EQU 2
+DEF MAX_ANIMATION_FRAMES EQU 3
 
 EntryPoint:
   ; Switch CPU to double-speed if needed
@@ -96,6 +96,9 @@ EntryPoint:
   ldh [rIE], a
   ei
 
+  ; Start the main loop
+  jp MainLoop
+
 MainLoop:
   ; Stop the CPU until the next interrupt
   halt
@@ -123,7 +126,7 @@ MainLoop:
   xor a
   ld [hNeedsPresentingFrame], a
   call SwapBuffers
-  call IncrementAnimationFrameIndex
+  call IncrementAnimationFrame
 .swapBuffersEnd
 
   ; Load the next data
@@ -148,31 +151,37 @@ ExecuteDataLoading:
   dw LoadFrame1TilesetChunk2
   dw LoadFrame1Tilemap
   dw Delay
-  dw PresentFrame1
-  dw LoadFrame2
+  dw PresentFrame
+  dw LoadFrame2TilesetChunk1
+  dw LoadFrame2TilesetChunk2
+  dw LoadFrame2Tilemap
+  dw Delay
+  dw PresentFrame
+  dw LoadFrame3
 ; todo: add other frames
 
+; Do nothing during this VBlank interrupt
 Delay:
   ret
 
-; Frame 0 loads while the screen is turned off.
-; It can be loaded in one go.
-LoadFrame0:
-  call CopyFrameTileset
-  call CopyBlackTile
-  call CopyFrameTilemap
+; Mark the frame as ready to be presented
+PresentFrame:
+  jp AnimationFrameReady
 
+; Frame 0 loads while the screen is turned off.
+LoadFrame0:
+  ; Frame 0 is plain black, and the tilemap is aready cleared: nothing else to do
   call AnimationFrameReady
   ret
 
 LoadFrame1TilesetChunk1:
-  call CopyFrameTileset
-  ld hl, hFrameStage
-  inc [hl]
+  call CopyTilesetForFrameStage
   ret
 
 LoadFrame1TilesetChunk2:
-  call CopyFrameTileset
+  ld hl, hFrameStage
+  inc [hl]
+  call CopyTilesetForFrameStage
   ret
 
 LoadFrame1Tilemap:
@@ -180,17 +189,30 @@ LoadFrame1Tilemap:
   call CopyFrameTilemap
   ret
 
-PresentFrame1:
-  call AnimationFrameReady
+LoadFrame2TilesetChunk1:
+  call CopyTilesetForFrameStage
+  ret
 
-LoadFrame2:
+LoadFrame2TilesetChunk2:
+  ld hl, hFrameStage
+  inc [hl]
+  call CopyTilesetForFrameStage
+  ret
+
+LoadFrame2Tilemap:
+  call CopyBlackTile
+  call CopyFrameTilemap
+  ret
+
+LoadFrame3:
   ; TODO
   ret
 
-CopyFrameTileset:
-  ; bc = (hFrame + hFrameStage) * 2
+CopyTilesetForFrameStage:
+  ; bc = (hFrame * 2 + hFrameStage) * 2
   ld b, 0
   ld a, [hFrame]
+  sla a
   ld hl, hFrameStage
   add a, [hl]
   sla a
@@ -265,7 +287,7 @@ AnimationFrameReady:
   ld [hNeedsPresentingFrame], a
   ret
 
-IncrementAnimationFrameIndex:
+IncrementAnimationFrame:
   ; Increment the animation frame index
   ld hl, hFrame
   inc [hl]
@@ -352,28 +374,39 @@ INCLUDE "memory.asm"
 SECTION "Tile data", ROM0
 
 ; Addresses of individual tilestruct definitions
-; Indexed by hFrame + hFrameStage
+; Indexed by hFrame * 2 + hFrameStage
 TilesetDefinitionsTable:
-._0   dw TilesetDefinitionFrame1
-._1_0 dw TilesetDefinitionFrame2Chunk1
-._1_1 dw TilesetDefinitionFrame2Chunk2
+._0_0 dw $0000
+._0_1 dw $0000
+._1_0 dw TilesetDefinitionFrame1Chunk1
+._1_1 dw TilesetDefinitionFrame1Chunk2
+._2_0 dw TilesetDefinitionFrame2Chunk1
+._2_1 dw TilesetDefinitionFrame2Chunk2
 
-TilesetDefinitionFrame1:
+DEF TILESET_1_CHUNKS_COUNT EQUS "(((Frame1Tiles.end - Frame1Tiles) / 16) / 2)"
+
+TilesetDefinitionFrame1Chunk1:
 .source dw Frame1Tiles
 .dest   dw _VRAM
-.count  db (Frame1Tiles.end - Frame1Tiles) / 16
+.count  db TILESET_1_CHUNKS_COUNT
 
-DEF TILESET_2_CHUNK_COUNT EQUS "(((Frame2Tiles.end - Frame2Tiles) / 16) / 2)"
+TilesetDefinitionFrame1Chunk2:
+.source dw Frame1Tiles + TILESET_1_CHUNKS_COUNT * 16
+.dest   dw _VRAM + TILESET_1_CHUNKS_COUNT * 16
+.count  db TILESET_1_CHUNKS_COUNT
+
+DEF TILESET_2_1_CHUNKS_COUNT EQUS "128"
+DEF TILESET_2_2_CHUNKS_COUNT EQUS "(((Frame2Tiles.end - Frame2Tiles) / 16) - TILESET_2_1_CHUNKS_COUNT)"
 
 TilesetDefinitionFrame2Chunk1:
 .source dw Frame2Tiles
 .dest   dw _VRAM
-.count  db TILESET_2_CHUNK_COUNT
+.count  db TILESET_2_1_CHUNKS_COUNT
 
 TilesetDefinitionFrame2Chunk2:
-.source dw Frame2Tiles + TILESET_2_CHUNK_COUNT * 16
-.dest   dw _VRAM + TILESET_2_CHUNK_COUNT * 16
-.count  db TILESET_2_CHUNK_COUNT
+.source dw Frame2Tiles + TILESET_2_1_CHUNKS_COUNT * 16
+.dest   dw _VRAM + TILESET_2_1_CHUNKS_COUNT * 16
+.count  db TILESET_2_2_CHUNKS_COUNT
 
 TilesetDefinitionBlackTile:
 .source dw BlackTile
@@ -401,14 +434,16 @@ SECTION "Tilemap", ROM0
 ; Tilemap source addresses in ROM
 ; Indexed by hFrame
 TilemapsTable:
-._0 dw Frame1Tilemap
-._1 dw Frame2Tilemap
+._0 dw $0000 ; plain black
+._1 dw Frame1Tilemap
+._2 dw Frame2Tilemap
 
 ; Number of row of each tilemap
 ; Indexed by hFrame
 TilemapRowsCountTable:
-._0 dw ((Frame1Tilemap.end - Frame1Tilemap) / TILEMAP_WIDTH)
-._1 dw ((Frame2Tilemap.end - Frame2Tilemap) / TILEMAP_WIDTH)
+._0 dw $0000
+._1 dw ((Frame1Tilemap.end - Frame1Tilemap) / TILEMAP_WIDTH)
+._2 dw ((Frame2Tilemap.end - Frame2Tilemap) / TILEMAP_WIDTH)
 
 Frame1Tilemap:
 INCBIN "gfx/1.bw.tilemap"

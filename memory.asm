@@ -85,7 +85,7 @@ CopyTileset:
   ld [rHDMA3], a
   ; Tiles count
   ld a, [hl]
-  sub 1 ; hdma transfers N+1 tiles
+  sub 1 ; HDMA transfers N+1 tiles
   ld [rHDMA5], a ; transfer starts
   ret
 
