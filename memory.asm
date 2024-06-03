@@ -58,6 +58,7 @@ DMAData:
 ;
 ; The definition data format is:
 ;   dw <source_address>
+;   dw <source_bank>
 ;   dw <dest_address>
 ;   ds <tiles_count>
 ;
@@ -75,6 +76,9 @@ CopyTileset:
   ; Source (high)
   ld a, [hli]
   ld [rHDMA1], a
+  ; Source bank
+  ld a, [hli]
+  ld [rROMB0], a
   ; Dest (low)
   ld a, [hli]
   ld [rHDMA4], a
@@ -96,6 +100,9 @@ CopyTileset:
   ld a, [hli]
   ld b, a
   push bc ; push on stack; we'll pop it back to hl befre copying
+  ; source bank
+  ld a, [hli]
+  ld [rROMB0], a
   ; de = destination
   ld a, [hli]
   ld e, a

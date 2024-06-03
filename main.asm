@@ -10,7 +10,7 @@ DEF TILEMAP_TOP    EQU 1
 DEF TILEMAP_LEFT   EQU 2
 
 ; Number of frames in the animation
-DEF MAX_ANIMATION_FRAMES EQU 5
+DEF MAX_ANIMATION_FRAMES EQU 6
 
 EntryPoint:
   ; Switch CPU to double-speed if needed
@@ -164,7 +164,11 @@ ExecuteDataLoading:
   dw LoadFrame4TilesetChunk2
   dw LoadFrame4Tilemap
   dw PresentFrame
-  dw LoadFrame5
+  dw LoadFrame5TilesetChunk1
+  dw LoadFrame5TilesetChunk2
+  dw LoadFrame5Tilemap
+  dw PresentFrame
+  dw LoadFrame6
 ; todo: add other frames
 
 ; Do nothing during this VBlank interrupt
@@ -241,7 +245,22 @@ LoadFrame4Tilemap:
   call CopyFrameTilemap
   ret
 
-LoadFrame5:
+LoadFrame5TilesetChunk1:
+  call CopyTilesetForFrameStage
+  ret
+
+LoadFrame5TilesetChunk2:
+  ld hl, hFrameStage
+  inc [hl]
+  call CopyTilesetForFrameStage
+  ret
+
+LoadFrame5Tilemap:
+  call CopyBlackTile
+  call CopyFrameTilemap
+  ret
+
+LoadFrame6:
   ; TODO
   ret
 
@@ -404,32 +423,7 @@ INCLUDE "table_jump.asm"
 INCLUDE "memory.asm"
 
 ; -------------------------------------------------------------------------------
-SECTION "Tilemap", ROM0
-
-; Tilemap source addresses in ROM
-; Indexed by hFrame
-TilemapsTable:
-._0 dw $0000 ; plain black
-._1 dw Frame1Tilemap
-._2 dw Frame2Tilemap
-._3 dw Frame3Tilemap
-._4 dw Frame4Tilemap
-
-Frame1Tilemap:
-INCBIN "gfx/1.bw.tilemap"
-  .end
-Frame2Tilemap:
-INCBIN "gfx/2.bw.tilemap"
-  .end
-Frame3Tilemap:
-INCBIN "gfx/3.bw.tilemap"
-  .end
-Frame4Tilemap:
-INCBIN "gfx/4.bw.tilemap"
-  .end
-
-; -------------------------------------------------------------------------------
-SECTION "Tile data", ROMX, BANK[$01]
+SECTION "Tileset definitions", ROM0
 
 ; Addresses of individual tilestruct definitions
 ; Indexed by hFrame * 2 + hFrameStage
@@ -444,62 +438,124 @@ TilesetDefinitionsTable:
 ._3_1 dw TilesetDefinitionFrame3Chunk2
 ._4_0 dw TilesetDefinitionFrame4Chunk1
 ._4_1 dw TilesetDefinitionFrame4Chunk2
+._5_0 dw TilesetDefinitionFrame5Chunk1
+._5_1 dw TilesetDefinitionFrame5Chunk2
 
 DEF TILESET_1_CHUNKS_COUNT EQUS "(((Frame1Tiles.end - Frame1Tiles) / 16) / 2)"
 
 TilesetDefinitionFrame1Chunk1:
-.source dw Frame1Tiles
-.dest   dw _VRAM
-.count  db TILESET_1_CHUNKS_COUNT
+.source      dw Frame1Tiles
+.source_bank db BANK(Frame1Tiles)
+.dest        dw _VRAM
+.count       db TILESET_1_CHUNKS_COUNT
 
 TilesetDefinitionFrame1Chunk2:
-.source dw Frame1Tiles + TILESET_1_CHUNKS_COUNT * 16
-.dest   dw _VRAM + TILESET_1_CHUNKS_COUNT * 16
-.count  db TILESET_1_CHUNKS_COUNT
+.source      dw Frame1Tiles + TILESET_1_CHUNKS_COUNT * 16
+.source_bank db BANK(Frame1Tiles)
+.dest        dw _VRAM + TILESET_1_CHUNKS_COUNT * 16
+.count       db TILESET_1_CHUNKS_COUNT
 
 DEF TILESET_2_1_CHUNKS_COUNT EQUS "128"
 DEF TILESET_2_2_CHUNKS_COUNT EQUS "(((Frame2Tiles.end - Frame2Tiles) / 16) - TILESET_2_1_CHUNKS_COUNT)"
 
 TilesetDefinitionFrame2Chunk1:
-.source dw Frame2Tiles
-.dest   dw _VRAM
-.count  db TILESET_2_1_CHUNKS_COUNT
+.source      dw Frame2Tiles
+.source_bank db BANK(Frame2Tiles)
+.dest        dw _VRAM
+.count       db TILESET_2_1_CHUNKS_COUNT
 
 TilesetDefinitionFrame2Chunk2:
-.source dw Frame2Tiles + TILESET_2_1_CHUNKS_COUNT * 16
-.dest   dw _VRAM + TILESET_2_1_CHUNKS_COUNT * 16
-.count  db TILESET_2_2_CHUNKS_COUNT
+.source      dw Frame2Tiles + TILESET_2_1_CHUNKS_COUNT * 16
+.source_bank db BANK(Frame2Tiles)
+.dest        dw _VRAM + TILESET_2_1_CHUNKS_COUNT * 16
+.count       db TILESET_2_2_CHUNKS_COUNT
 
 DEF TILESET_3_CHUNKS_COUNT EQUS "(((Frame3Tiles.end - Frame3Tiles) / 16) / 2)"
 
 TilesetDefinitionFrame3Chunk1:
-.source dw Frame3Tiles
-.dest   dw _VRAM
-.count  db TILESET_3_CHUNKS_COUNT
+.source      dw Frame3Tiles
+.source_bank db BANK(Frame3Tiles)
+.dest        dw _VRAM
+.count       db TILESET_3_CHUNKS_COUNT
 
 TilesetDefinitionFrame3Chunk2:
-.source dw Frame3Tiles + TILESET_3_CHUNKS_COUNT * 16
-.dest   dw _VRAM + TILESET_3_CHUNKS_COUNT * 16
-.count  db TILESET_3_CHUNKS_COUNT
+.source      dw Frame3Tiles + TILESET_3_CHUNKS_COUNT * 16
+.source_bank db BANK(Frame3Tiles)
+.dest        dw _VRAM + TILESET_3_CHUNKS_COUNT * 16
+.count       db TILESET_3_CHUNKS_COUNT
 
 DEF TILESET_4_CHUNKS_COUNT EQUS "(((Frame4Tiles.end - Frame4Tiles) / 16) / 2)"
 
 TilesetDefinitionFrame4Chunk1:
-.source dw Frame4Tiles
-.dest   dw _VRAM
-.count  db TILESET_4_CHUNKS_COUNT
+.source      dw Frame4Tiles
+.source_bank db BANK(Frame4Tiles)
+.dest        dw _VRAM
+.count       db TILESET_4_CHUNKS_COUNT
 
 TilesetDefinitionFrame4Chunk2:
-.source dw Frame4Tiles + TILESET_4_CHUNKS_COUNT * 16
-.dest   dw _VRAM + TILESET_4_CHUNKS_COUNT * 16
-.count  db TILESET_4_CHUNKS_COUNT
+.source      dw Frame4Tiles + TILESET_4_CHUNKS_COUNT * 16
+.source_bank db BANK(Frame4Tiles)
+.dest        dw _VRAM + TILESET_4_CHUNKS_COUNT * 16
+.count       db TILESET_4_CHUNKS_COUNT
+
+DEF TILESET_5_CHUNKS_COUNT EQUS "(((Frame5Tiles.end - Frame5Tiles) / 16) / 2)"
+
+TilesetDefinitionFrame5Chunk1:
+.source      dw Frame5Tiles
+.source_bank db BANK(Frame5Tiles)
+.dest        dw _VRAM
+.count       db TILESET_5_CHUNKS_COUNT
+
+TilesetDefinitionFrame5Chunk2:
+.source      dw Frame5Tiles + TILESET_5_CHUNKS_COUNT * 16
+.source_bank db BANK(Frame5Tiles)
+.dest        dw _VRAM + TILESET_5_CHUNKS_COUNT * 16
+.count       db TILESET_5_CHUNKS_COUNT
 
 TilesetDefinitionBlackTile:
-.source dw BlackTile
-.dest   dw _VRAM + $1000 - 16 ; last tile of tiles data memory
-.count  db (BlackTile.end - BlackTile) / 16
+.source      dw BlackTile
+.source_bank db BANK(BlackTile)
+.dest        dw _VRAM + $1000 - 16 ; last tile of tiles data memory
+.count       db (BlackTile.end - BlackTile) / 16
+
+; -------------------------------------------------------------------------------
+SECTION "Tilemaps", ROM0
+
+; Tilemap source addresses in ROM
+; Indexed by hFrame
+TilemapsTable:
+._0 dw $0000 ; plain black
+._1 dw Frame1Tilemap
+._2 dw Frame2Tilemap
+._3 dw Frame3Tilemap
+._4 dw Frame4Tilemap
+._5 dw Frame5Tilemap
+
+Frame1Tilemap:
+INCBIN "gfx/1.bw.tilemap"
+  .end
+Frame2Tilemap:
+INCBIN "gfx/2.bw.tilemap"
+  .end
+Frame3Tilemap:
+INCBIN "gfx/3.bw.tilemap"
+  .end
+Frame4Tilemap:
+INCBIN "gfx/4.bw.tilemap"
+  .end
+Frame5Tilemap:
+INCBIN "gfx/5.bw.tilemap"
+  .end
+
+; -------------------------------------------------------------------------------
+SECTION "Tilesets - frame 1-4", ROMX, BANK[$01]
 
 ALIGN 4 ; Align to 16-bytes boundaries, for HDMA transfer
+BlackTile:
+  db $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+  .end
+
+ALIGN 4
 Frame1Tiles:
 INCBIN "gfx/1.bw.tileset.2bpp"
   .end
@@ -519,9 +575,12 @@ Frame4Tiles:
 INCBIN "gfx/4.bw.tileset.2bpp"
   .end
 
+; -------------------------------------------------------------------------------
+SECTION "Tilesets - frame 5", ROMX, BANK[$02]
+
 ALIGN 4
-BlackTile:
-  db $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+Frame5Tiles:
+INCBIN "gfx/5.bw.tileset.2bpp"
   .end
 
 ; -------------------------------------------------------------------------------
