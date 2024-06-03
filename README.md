@@ -90,11 +90,11 @@ TODO
  (Because we're not in CGB compatible mode!)
 - ✅ Convert the ROM to GBC
 - ✅ Split loading into several stages (it seems 224 tiles can be loaded per vblank max)
-- DMA tiles and tilemap
+- ✅ DMA tiles and tilemap
   - ✅ Align tilesets to $10 boundaries
   - ✅ Optimize tilemap load to fit a VBlank period
   - ✅ DMA only the allowed size (split large tilesets in two)
-  - Rewrite tileset datastructures as structs (instead of several arrays)
+  - ✅ Rewrite tileset datastructures as structs (instead of several arrays)
 - Diplay all frames in non-colored mode
 - Add frame-by-frame button
 - Write a script to output color statistics about an image: color count per picture/per tile/per 8x2 bloc

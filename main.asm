@@ -195,35 +195,20 @@ CopyFrameTileset:
   add a, [hl]
   sla a
   ld c, a
-  ; hl = TilesetSourcesTable[bc] (source)
-  ld hl, TilesetSourcesTable
-  add hl, bc
-  ld a, [hli]
-  ld e, a
-  ld a, [hl]
-  ld h, a
-  ld l, e
-  ; de = TilesetDestinationsTable (destination)
-  push hl ; save source address
-  ld hl, TilesetDestinationsTable
-  add hl, bc
-  ld a, [hli]
-  ld e, a
-  ld a, [hl]
-  ld d, a
-  ld hl, TilesetSizesTable
+  ; bc = TilesetDefinitionsTable[bc]
+  ld hl, TilesetDefinitionsTable
   add hl, bc
   ld a, [hli]
   ld c, a
   ld a, [hl]
-  ld b, a
-  pop hl ; restore source address
-  ; Switch to back VRAM bank
+  ld h, a
+  ld l, c
+  ; Switch to back-buffer VRAM bank
   ld a, [hTilesDataBankBack]
   ld [rVBK], a
   ; Copy
-  call CopyTiles
-  ; Restore front VRAM bank
+  call CopyTileset
+  ; Restore front-buffer VRAM bank
   ld a, [hTilesDataBankFront]
   ld [rVBK], a
   ret
@@ -263,17 +248,12 @@ CopyFrameTilemap:
   ret
 
 CopyBlackTile:
-  ; hl = origin
-  ld hl, BlackTile
-  ; de = destination (last tile of tiles backbuffer)
-  ld de, $8000 + $1000 - 16
-  ; bc = size
-  ld bc, BlackTile.end - BlackTile
+  ld hl, TilesetDefinitionBlackTile
   ; Switch to back VRAM bank
   ld a, [hTilesDataBankBack]
   ld [rVBK], a
   ; Copy
-  call CopyData
+  call CopyTileset
   ; Restore front VRAM bank
   ld a, [hTilesDataBankFront]
   ld [rVBK], a
@@ -371,40 +351,46 @@ INCLUDE "memory.asm"
 ; -------------------------------------------------------------------------------
 SECTION "Tile data", ROM0
 
-DEF TILESET_1_CHUNK_1_SIZE EQUS "((Frame1Tiles.end - Frame1Tiles) / 16)"
-DEF TILESET_2_CHUNK_1_SIZE EQUS "120" ; split tileset2 in two batches - the first is 120 tiles
-DEF TILESET_2_CHUNK_2_SIZE EQUS "((Frame2Tiles.end - Frame2Tiles) / 16) - TILESET_2_CHUNK_1_SIZE"
-
-; Tileset source addresses in ROM
+; Addresses of individual tilestruct definitions
 ; Indexed by hFrame + hFrameStage
-TilesetSourcesTable:
-._0   dw Frame1Tiles
-._1_0 dw Frame2Tiles
-._1_1 dw Frame2Tiles + TILESET_2_CHUNK_1_SIZE * 16
+TilesetDefinitionsTable:
+._0   dw TilesetDefinitionFrame1
+._1_0 dw TilesetDefinitionFrame2Chunk1
+._1_1 dw TilesetDefinitionFrame2Chunk2
 
-; Tileset destination addresses in VRAM
-; Indexed by hFrame + hFrameStage
-TilesetDestinationsTable:
-._0   dw _VRAM
-._1_0 dw _VRAM
-._1_1 dw _VRAM + TILESET_2_CHUNK_1_SIZE * 16
+TilesetDefinitionFrame1:
+.source dw Frame1Tiles
+.dest   dw _VRAM
+.count  db (Frame1Tiles.end - Frame1Tiles) / 16
 
-; Size of each tileset data (in tiles)
-; Indexed by hFrame + hFrameStage
-TilesetSizesTable:
-._0   dw TILESET_1_CHUNK_1_SIZE
-._1_0 dw TILESET_2_CHUNK_1_SIZE
-._1_1 dw TILESET_2_CHUNK_2_SIZE
+DEF TILESET_2_CHUNK_COUNT EQUS "(((Frame2Tiles.end - Frame2Tiles) / 16) / 2)"
+
+TilesetDefinitionFrame2Chunk1:
+.source dw Frame2Tiles
+.dest   dw _VRAM
+.count  db TILESET_2_CHUNK_COUNT
+
+TilesetDefinitionFrame2Chunk2:
+.source dw Frame2Tiles + TILESET_2_CHUNK_COUNT * 16
+.dest   dw _VRAM + TILESET_2_CHUNK_COUNT * 16
+.count  db TILESET_2_CHUNK_COUNT
+
+TilesetDefinitionBlackTile:
+.source dw BlackTile
+.dest   dw _VRAM + $1000 - 16 ; last tile of tiles data memory
+.count  db (BlackTile.end - BlackTile) / 16
 
 ALIGN 4 ; Align to 16-bytes boundaries, for HDMA transfer
 Frame1Tiles:
 INCBIN "gfx/1.bw.tileset.2bpp"
   .end
+
 ALIGN 4
 Frame2Tiles:
 INCBIN "gfx/2.bw.tileset.2bpp"
   .end
 
+ALIGN 4
 BlackTile:
   db $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
   .end
