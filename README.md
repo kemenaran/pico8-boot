@@ -96,7 +96,7 @@ TODO
   - ✅ DMA only the allowed size (split large tilesets in two)
   - ✅ Rewrite tileset datastructures as structs (instead of several arrays)
 - ✅ First frame is black
-- Diplay all frames in non-colored mode
+- ✅ Diplay all frames in non-colored mode
 - Add frame-by-frame button
 - Write a script to output color statistics about an image: color count per picture/per tile/per 8x2 bloc
 - Write a script to rotate the image by 1px every line, and see if the stats are better

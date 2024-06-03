@@ -52,27 +52,15 @@ EntryPoint:
   ld bc, $FFFE - _HRAM
   call ClearData
 
-  ; Clear BG maps 0 and 1
-  ld de, _SCRN0
-  ld bc, _SRAM - _SCRN0
-  ld a, $FF
-  call FillData
+  ; Clear BG maps
+  call ClearBGMap0
+  call ClearBGMap1
 
   ; Clear attributes maps
-  ld a, 1
-  ld [rVBK], a
-  ; Clear Attr map 0 (load tiles from VRAM bank 0)
-  ld de, _SCRN0
-  ld bc, _SCRN1 - _SCRN0
-  ld a, %00000000
-  call FillData
-  ; Clear Attr map 1 (load tiles from VRAM bank 1)
-  ld de, _SCRN1
-  ld bc, _SRAM - _SCRN1
-  ld a, %00001000
-  call FillData
-  xor a
-  ld [rVBK], a
+  ld a, %00000000 ; load tiles from VRAM bank 0
+  call FillAttrMap0
+  ld a, %00001000 ; load tiles from VRAM bank 1
+  call FillAttrMap1
 
   ; Initialize double-buffering
   ; (first frame will be written to VRAM bank 0)
@@ -116,7 +104,7 @@ MainLoop:
 
   ; If we reached the last animation frame, return
   ld a, [hFrame]
-  cp MAX_ANIMATION_FRAMES
+  cp MAX_ANIMATION_FRAMES + 1
   jp z, MainLoop
 
   ; If the new frame is ready, swap buffers
@@ -168,8 +156,11 @@ ExecuteDataLoading:
   dw LoadFrame5TilesetChunk2
   dw LoadFrame5Tilemap
   dw PresentFrame
-  dw LoadFrame6
-; todo: add other frames
+  dw LoadFrame6Tilemap
+  dw Delay
+  dw Delay
+  dw PresentFrame
+  dw Delay ; should never be called
 
 ; Do nothing during this VBlank interrupt
 Delay:
@@ -260,8 +251,9 @@ LoadFrame5Tilemap:
   call CopyFrameTilemap
   ret
 
-LoadFrame6:
-  ; TODO
+LoadFrame6Tilemap:
+  call CopyBlackTile
+  call CopyFrameTilemap
   ret
 
 CopyTilesetForFrameStage:
@@ -421,6 +413,7 @@ SwapBuffers:
 
 INCLUDE "table_jump.asm"
 INCLUDE "memory.asm"
+INCLUDE "gfx.asm"
 
 ; -------------------------------------------------------------------------------
 SECTION "Tileset definitions", ROM0
@@ -530,6 +523,7 @@ TilemapsTable:
 ._3 dw Frame3Tilemap
 ._4 dw Frame4Tilemap
 ._5 dw Frame5Tilemap
+._6 dw Frame6Tilemap
 
 Frame1Tilemap:
 INCBIN "gfx/1.bw.tilemap"
@@ -545,6 +539,9 @@ INCBIN "gfx/4.bw.tilemap"
   .end
 Frame5Tilemap:
 INCBIN "gfx/5.bw.tilemap"
+  .end
+Frame6Tilemap:
+INCBIN "gfx/6.bw.tilemap"
   .end
 
 ; -------------------------------------------------------------------------------
