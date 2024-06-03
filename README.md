@@ -75,10 +75,10 @@ Tools
 Palettes converter:
 - https://orangeglo.github.io/BGR555/ (use Big Endian)
 
-Images conversio:
+Images conversion:
 - `convert 1.small.png +dither -colorspace Gray -colors 4 -depth 4 1.bw.png`
 - `rgbgfx original-gfx/4-colors/1.bw.png --unique-tiles --tilemap gfx/1.bw.tilemap --output gfx/1.bw.tileset.2bpp`
-
+- `rgbgfx gfx/3.bw.tileset.png --reverse 16 --output gfx/3.bw.tileset.2bpp`
 
 TODO
 ====
