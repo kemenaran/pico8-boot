@@ -115,7 +115,7 @@ VBlankInterrupt:
   ; If we reached the last animation frame, return
   ld a, [hFrame]
   cp MAX_ANIMATION_FRAMES + 1
-  jp z, MainLoop
+  jp z, .done
 
   ; Load the next data
   call ExecuteDataLoading
@@ -123,6 +123,7 @@ VBlankInterrupt:
   ; If a new frame is ready, swap buffers
   call SwapBuffersIfReady
 
+.done
   reti
 
 ; Execute a data-loading step on each VBlank.
@@ -194,6 +195,8 @@ LoadFrame1Tilemap:
   ret
 
 PresentFrame1:
+  ; Loading the palettes must be the last thing we do before presenting the frame,
+  ; because they are not double-buffered.
   ld hl, Pico8Palettes
   call CopyBGPalettes
   call AnimationFrameReady
