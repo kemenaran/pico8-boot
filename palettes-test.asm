@@ -60,18 +60,18 @@ EntryPoint:
   call ClearBGMap0
   call ClearBGMap1
 
-  ; Clear attributes map
-  ld de, _SCRN0
-  ld bc, _SRAM - _SCRN0
-  ld a, $00 ; use BG palette 0
-  call FillData
+  ; Load attributes map
+  ld de, Attrmap ; source
+  ld hl, _SCRN0  ; destination
+  ld bc, 18      ; rows count
+  call CopyAttrmap
 
-  ; Load a fully black BG palettes set
-  ld hl, BlackPalettes
+  ; Load a grayscale BG palettes set
+  ld hl, DMGPalettes
   call CopyBGPalettes
 
-  ; Load a black tile
-  call CopyBlackTile
+  ; Load a single grayscale tile
+  call CopyGrayscaleTile
 
   ; Turn the LCD on
   ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BLK01
@@ -136,13 +136,46 @@ VBlankInterrupt:
   reti
 
 ScanlineInterrupt:
+  ; Save the stack pointer
+  ld [hStackPointer], sp
+
+  ; Move the stack pointer to the beginning of the palettes set
+  ld sp, GreenPalettes
+
+  ; Prepare the color register
+  ld a, BCPSF_AUTOINC | 0
+  ldh [rBGPI], a
+
+  ; Copy as much colors as we can (two bytes)
+REPT 10
+  pop de
+  ld a, d
+  ldh [rBGPD], a
+  ld a, e
+  ldh [rBGPD], a
+ENDR
+
+  ; Restore the stack pointer
+  ld sp, hStackPointer
+  pop hl
+  ld sp, hl
   reti
 
-CopyBlackTile:
-  ld hl, BlackTile
+CopyGrayscaleTile:
+  ld hl, GrayscaleTile
   ld de, _VRAM + $0FF0
-  ld bc, BlackTile.end - BlackTile
+  ld bc, GrayscaleTile.end - GrayscaleTile
   jp CopyData
+
+GreenPalettes:
+  dw $F75B, $E50F, $8102, $8001
+  dw $F75B, $E50F, $8102, $8001
+  dw $F75B, $E50F, $8102, $8001
+  dw $F75B, $E50F, $8102, $8001
+  dw $F75B, $E50F, $8102, $8001
+  dw $F75B, $E50F, $8102, $8001
+  dw $F75B, $E50F, $8102, $8001
+  dw $F75B, $E50F, $8102, $8001
 
 INCLUDE "memory.asm"
 INCLUDE "gfx.asm"
@@ -151,8 +184,29 @@ INCLUDE "gfx.asm"
 SECTION "Tilesets - frame 1-4", ROMX, BANK[$01]
 
 ALIGN 4 ; Align to 16-bytes boundaries, for HDMA transfer
-BlackTile:
-  db $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF, $FF
+GrayscaleTile:
+INCBIN "gfx/grayscale.2bpp"
+  .end
+
+Attrmap:
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
+  db $00, $00, $01, $01, $02, $02, $03, $03, $04, $04, $05, $05, $06, $06, $07, $07, $07, $07, $07, $07
   .end
 
 ; -------------------------------------------------------------------------------
@@ -170,3 +224,6 @@ SECTION "HRAM", HRAM[$FF80]
 
 ; Number of vertical interrupts that occured
 hVICount: ds 1
+
+; Original address of the stack pointer
+hStackPointer: ds 2
