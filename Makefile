@@ -1,5 +1,6 @@
-.PHONY: default build run
+.PHONY: build
 .PRECIOUS: %.2bpp
+.DEFAULT_GOAL := build
 
 asm_files = $(shell find . -type f -name '*.asm' -o -name '*.inc')
 gfx_files = $(shell find ./gfx -type f -name '*.png')
@@ -31,5 +32,3 @@ clean:
 	rm -f pico8-boot.gbc.sym
 	rm -f palettes-test.gbc
 	rm -f palettes-test.gbc.sym
-
-default: build
