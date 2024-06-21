@@ -1,18 +1,15 @@
 ; From https://gbdev.io/gb-asm-tutorial/part1/hello_world.html
 
 INCLUDE "hardware.inc"
-INCLUDE "header.asm"
+INCLUDE "constants.asm"
 
-; Tilemap layout, in tiles
-DEF TILEMAP_WIDTH  EQU 16
-DEF TILEMAP_HEIGHT EQU 16
-DEF TILEMAP_TOP    EQU 1
-DEF TILEMAP_LEFT   EQU 2
-DEF ATTRMAP_WIDTH  EQU 20
-DEF ATTRMAP_HEIGHT EQU 18
+SECTION "Interrupt VBlank", ROM0[$0040]
+  jp VBlankInterrupt
 
-; Number of frames in the animation
-DEF MAX_ANIMATION_FRAMES EQU 6
+SECTION "Header", ROM0[$100]
+  jp EntryPoint
+
+ds $150 - @, 0 ; Make room for the header
 
 EntryPoint:
   ; Switch CPU to double-speed if needed
@@ -73,8 +70,11 @@ EntryPoint:
   ; (first frame will be written to VRAM bank 0)
   call SwapBuffers.presentBufferB
 
-  ; Load a fully black palette for the first frame
+  ; Load a fully black screen for the first frame
   call LoadFrame0
+
+  ; Present the first frame
+  call SwapBuffersIfReady
 
   ; Turn the LCD on
   ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BLK01
@@ -103,6 +103,11 @@ MainLoop:
   cp $90 ; 144
   jp c, .ensureVBlank
 
+  ; Loop
+  jp MainLoop
+
+; Executed by the VBlank interrupt handler
+VBlankInterrupt:
   ; Increment the VI count
   ld hl, hVICount
   inc [hl]
@@ -112,23 +117,13 @@ MainLoop:
   cp MAX_ANIMATION_FRAMES + 1
   jp z, MainLoop
 
-  ; If the new frame is ready, swap buffers
-  ld a, [hNeedsPresentingFrame]
-  and a
-  jp z, .swapBuffersEnd
-.swapBuffers
-  xor a
-  ld [hNeedsPresentingFrame], a
-  call SwapBuffers
-  call IncrementAnimationFrame
-.swapBuffersEnd
-
   ; Load the next data
-  ; (this might or might not result in a new frame being ready)
   call ExecuteDataLoading
 
-  ; Loop
-  jp MainLoop
+  ; If a new frame is ready, swap buffers
+  call SwapBuffersIfReady
+
+  reti
 
 ; Execute a data-loading step on each VBlank.
 ;
@@ -140,7 +135,7 @@ ExecuteDataLoading:
   ; Execute the handler for the current VI
   ld a, [hVICount]
   call TableJump
-  dw LoadFrame0
+  dw $0000
   dw LoadFrame1TilesetChunk1
   dw LoadFrame1TilesetChunk2
   dw LoadFrame1Tilemap
@@ -199,16 +194,12 @@ LoadFrame1Tilemap:
   ret
 
 PresentFrame1:
+  ld hl, Pico8Palettes
+  call CopyBGPalettes
   call AnimationFrameReady
   ret
 
 LoadFrame2TilesetChunk1:
-  ; !!!!!
-  ; FIXME: this should be called the frame before
-  ld hl, Pico8Palettes
-  call CopyBGPalettes
-  ; !!!!!!
-
   call CopyTilesetForFrameStage
   ret
 
@@ -357,6 +348,19 @@ IncrementAnimationFrame:
   ld [hFrameStage], a
   ret
 
+SwapBuffersIfReady:
+  ; If no new frame is ready, present the same buffer
+  ld a, [hNeedsPresentingFrame]
+  and a
+  ret z
+
+  ; Swap buffers
+  xor a
+  ld [hNeedsPresentingFrame], a
+  call IncrementAnimationFrame
+  ; fallthrough
+
+; Swap the front buffer and the back buffer (tile data and BG map)
 SwapBuffers:
   ld a, [hTilesDataBankFront]
   and a
