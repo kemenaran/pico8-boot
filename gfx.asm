@@ -1,6 +1,6 @@
 ClearBGMap0:
   ld de, _SCRN0
-  ld bc, _SRAM - _SCRN0
+  ld bc, _SCRN1 - _SCRN0
   ld a, $FF
   jp FillData
 
