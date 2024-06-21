@@ -12,7 +12,13 @@ gfx_files = $(shell find ./gfx -type f -name '*.png')
 %.o: %.asm $(asm_files) $(gfx_files:.png=.2bpp)
 	rgbasm --export-all --halt-without-nop --preserve-ld -o $@ $<
 
+# Build the demo ROM
 pico8-boot.gbc: main.o
+	rgblink -n $(@:.gbc=.sym) -o $@ $^
+	rgbfix --color-only --mbc-type MBC5 --pad-value 0xFF --validate $@
+
+# Build a test of palettes swap timing
+palettes-test.gbc: palettes-test.o
 	rgblink -n $(@:.gbc=.sym) -o $@ $^
 	rgbfix --color-only --mbc-type MBC5 --pad-value 0xFF --validate $@
 
@@ -21,7 +27,9 @@ build: pico8-boot.gbc
 clean:
 	rm -f *.o
 	rm -f gfx/*.2bpp
-	rm -f pico8-boot.gbc.sym
 	rm -f pico8-boot.gbc
+	rm -f pico8-boot.gbc.sym
+	rm -f palettes-test.gbc
+	rm -f palettes-test.gbc.sym
 
 default: build
