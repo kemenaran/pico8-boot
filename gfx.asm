@@ -118,6 +118,9 @@ ENDR
   ; If not at the end yet, loop
   dec c
   jp nz, .loop
+  ; Restore VRAM bank
+  xor a
+  ld [rVBK], a
   ret
 
 ; Pico8 colors
@@ -179,7 +182,7 @@ CopyBGPalettes:
   ld b, 64
 .loop
   ld a, [hli]
-  ldh [rBGPD] ,a
+  ldh [rBGPD], a
   dec b
   jr nz, .loop
   ret
