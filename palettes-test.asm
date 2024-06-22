@@ -9,7 +9,8 @@ SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
 
 SECTION "LCD Status interrupt", ROM0[$0048]
-  jp ScanlineInterrupt
+  ;jp ScanlineInterruptPopSlide
+  jp ScanlineInterruptHardcodedSlide
 
 SECTION "Header", ROM0[$100]
   jp EntryPoint
@@ -17,36 +18,27 @@ SECTION "Header", ROM0[$100]
 ds $150 - @, 0 ; Make room for the header
 
 EntryPoint:
-  ; Switch CPU to double-speed if needed
-  cp   BOOTUP_A_CGB ; running on Game Boy Color?
-  jr   nz, .speedSwitchEnd
-  ; Do we need to switch the CPU speed?
-  ldh  a, [rKEY1]
-  and  KEY1F_DBLSPEED
-  jr   nz, .speedSwitchEnd
-  ; Configure for double-speed
-  ld   a, P1F_5 | P1F_4
-  ldh  [rP1], a
-  ld   a, KEY1F_PREPARE
-  ldh  [rKEY1], a
-  xor  a
-  ldh  [rIE], a
-  stop
-.speedSwitchEnd
-
   ; Shut down audio circuitry
   ld a, 0
   ld [rNR52], a
 
-  ; Do not turn the LCD off outside of VBlank
+  ; Turn the LCD off
+  ; (do not turn the LCD off outside of VBlank)
 .waitVBlank
   ld a, [rLY]
   cp 144
   jp c, .waitVBlank
-
-  ; Turn the LCD off
   ld a, 0
   ld [rLCDC], a
+
+  ; Switch CPU to double-speed
+  xor  a
+  ldh  [rIE], a
+  ld   a, P1F_5 | P1F_4
+  ldh  [rP1], a
+  ld   a, KEY1F_PREPARE
+  ldh  [rKEY1], a
+  stop
 
   ; Initialize stack
   ld sp, wStackTop
@@ -135,7 +127,49 @@ VBlankInterrupt:
 .done
   reti
 
-ScanlineInterrupt:
+; Scanline interrupt with hardcoded color values
+ScanlineInterruptHardcodedSlide:
+  ; In theory we should save registers and restore them at the end of the interrupt,
+  ; but let's see if we can get away without for now.
+  ;push af
+  ;push hl
+
+  ; Prepare the color register
+  ld a, BCPSF_AUTOINC | 0
+  ldh [rBGPI], a
+
+  ; Copy a color (8 cycles)
+MACRO copy_color
+  ld a, HIGH(\1) ; 2 cycles
+  ld [hl], a     ; 2 cycles
+  ld a, LOW(\1)  ; 2 cycles
+  ld [hl], a     ; 2 cycles
+ENDM
+
+  ; Copy as much palettes as we can
+  ld hl, rBGPD   ; 3 cycles
+REPT 4
+  copy_color $F75B
+  copy_color $E50F
+  copy_color $8102
+  copy_color $8001
+ENDR
+
+  ; !!!!!!!!!!!!!!!!!!!!!!!!!!
+  ; TODO:
+  ; - start interrupt on mode 2 (instead of mode 0),
+  ; and use this time to prepare the data to copy
+  ; - disable OAM
+  ; !!!!!!!!!!!!!!!!!!!!!!!!!!
+
+  ; See comment above
+  ;pop hl
+  ;pop af
+  reti
+
+; Popslide version of the scanline interrupt
+; (unused, for reference)
+ScanlineInterruptPopSlide:
   ; Save the stack pointer
   ld [hStackPointer], sp
 
@@ -146,13 +180,13 @@ ScanlineInterrupt:
   ld a, BCPSF_AUTOINC | 0
   ldh [rBGPI], a
 
-  ; Copy as much colors as we can (two bytes)
-REPT 10
-  pop de
-  ld a, d
-  ldh [rBGPD], a
-  ld a, e
-  ldh [rBGPD], a
+  ; Copy as much palettes as we can
+  ld hl, rBGPD ; 3 cycles
+REPT 16
+  ; Copy a color (7 cycles)
+  pop de      ; 3 cycles
+  ld [hl], d  ; 2 cycles
+  ld [hl], e  ; 2 cycles
 ENDR
 
   ; Restore the stack pointer
