@@ -9,8 +9,8 @@ SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
 
 SECTION "LCD Status interrupt", ROM0[$0048]
-  ;jp ScanlineInterruptPopSlide
-  jp ScanlineInterruptHardcodedSlide
+  jp ScanlineInterruptPopSlide
+  ;jp ScanlineInterruptHardcodedSlide
 
 SECTION "Header", ROM0[$100]
   jp EntryPoint
@@ -27,7 +27,7 @@ EntryPoint:
 .waitVBlank
   ld a, [rLY]
   cp 144
-  jp c, .waitVBlank
+  jr c, .waitVBlank
   ld a, 0
   ld [rLCDC], a
 
@@ -66,7 +66,7 @@ EntryPoint:
   call CopyGrayscaleTile
 
   ; Turn the LCD on
-  ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BLK01
+  ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BLK01 | LCDCF_WINOFF | LCDCF_OBJOFF
   ld [rLCDC], a
 
   ; During the first (blank) frame, initialize display registers
@@ -89,8 +89,8 @@ MainLoop:
   ; Ensure we actually reached v-blank
 .ensureVBlank
   ld a, [rLY]
-  cp $90 ; 144
-  jp c, .ensureVBlank
+  cp 144
+  jr c, .ensureVBlank
 
   ; Loop
   jp MainLoop
@@ -104,21 +104,22 @@ VBlankInterrupt:
   ; If we reached the demo start, enable the palette swap code
   ld a, [hVICount]
   cp PALETTE_SWAP_START_VI
-  jp z, .enableScanlineInterrupt
+  jr z, .enableScanlineInterrupt
   ; One frame after, disable the palette swap code
   cp PALETTE_SWAP_START_VI + 1
-  jp z, .disableScanlineInterrupt
+  jr z, .disableScanlineInterrupt
   jp .done
 
 .enableScanlineInterrupt
-  ; Trigger the scanline interrupt on mode 0 (HBlank)
-  ; TODO: trigger on mode 2 instead (OAM scan), to have more time for swapping palettes
-  ld a, STATF_MODE00
+  ; Trigger the scanline interrupt on LYC == 1
+  ld a, STATF_LYC
   ldh [rSTAT], a
+  ld a, 1
+  ldh [rLYC], a
   ; Enable the scanline interrupt
   ld a, IEF_VBLANK | IEF_STAT
   ldh [rIE], a
-  jp .done
+  jr .done
 
 .disableScanlineInterrupt
   ld a, IEF_VBLANK
@@ -155,45 +156,74 @@ REPT 4
   copy_color $8001
 ENDR
 
-  ; !!!!!!!!!!!!!!!!!!!!!!!!!!
-  ; TODO:
-  ; - start interrupt on mode 2 (instead of mode 0),
-  ; and use this time to prepare the data to copy
-  ; - disable OAM
-  ; !!!!!!!!!!!!!!!!!!!!!!!!!!
-
   ; See comment above
   ;pop hl
   ;pop af
   reti
 
 ; Popslide version of the scanline interrupt
-; (unused, for reference)
 ScanlineInterruptPopSlide:
+  ; Mode 2 - OAM scan (40 GBC cycles)
+  ; ------------------------------------------------------
+
+  ; (called the interrupt handler - 5 cycles)
+
   ; Save the stack pointer
-  ld [hStackPointer], sp
+  ld [hStackPointer], sp ; 5 cycles
 
   ; Move the stack pointer to the beginning of the palettes set
-  ld sp, GreenPalettes
+  ld sp, GreenPalettes ; 3 cycles
 
-  ; Prepare the color register
-  ld a, BCPSF_AUTOINC | 0
-  ldh [rBGPI], a
+  ; Prepare the color register (7 cycles)
+  ld a, BCPSF_AUTOINC | 0 ; 2 cycles
+  ldh [rBGPI], a          ; 3 cycles
+  ld l, LOW(rBGPD)        ; 2 cycles
 
-  ; Copy as much palettes as we can
-  ld hl, rBGPD ; 3 cycles
-REPT 16
+  ; Push some bytes before the end of Mode 2
+REPT 2
   ; Copy a color (7 cycles)
   pop de      ; 3 cycles
   ld [hl], d  ; 2 cycles
   ld [hl], e  ; 2 cycles
 ENDR
 
-  ; Restore the stack pointer
-  ld sp, hStackPointer
-  pop hl
-  ld sp, hl
-  reti
+  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles)
+  ; ------------------------------------------------------
+
+  ; Pre-pop two colors
+  pop bc
+  pop de
+
+  ; Wait for HBlank (mode 0)
+  ld hl, rSTAT
+.notHBlank
+  bit STATB_BUSY, [hl]
+  jr nz, .notHBlank
+
+  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles)
+  ; ------------------------------------------------------
+
+  ld l, LOW(rBGPD) ; 2 cycles
+
+  ; Copy the two colors we stored in registers during Mode 3 (8 cycles)
+  ld [hl], b  ; 2 cycles
+  ld [hl], c  ; 2 cycles
+  ld [hl], d  ; 2 cycles
+  ld [hl], e  ; 2 cycles
+
+  ; Now copy as much colors as we can
+REPT 12
+  ; Copy a color (7 cycles)
+  pop de      ; 3 cycles
+  ld [hl], d  ; 2 cycles
+  ld [hl], e  ; 2 cycles
+ENDR
+
+  ; Restore the stack pointer and return (12 cycles)
+  ld sp, hStackPointer  ; 3 cycles
+  pop hl                ; 3 cycles
+  ld sp, hl             ; 2 cycles
+  reti                  ; 4 cycles
 
 CopyGrayscaleTile:
   ld hl, GrayscaleTile
