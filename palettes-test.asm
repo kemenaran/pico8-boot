@@ -135,6 +135,7 @@ VBlankInterrupt:
   reti
 
 ; Scanline interrupt with hardcoded color values
+; (unused, as it is slower than a popslide)
 ScanlineInterruptHardcodedSlide:
   ; In theory we should save registers and restore them at the end of the interrupt,
   ; but let's see if we can get away without for now.
@@ -178,7 +179,7 @@ ScanlineInterruptPopSlide:
   ld [hStackPointer], sp ; 5 cycles
 
   ; Move the stack pointer to the beginning of the palettes set
-  ld sp, GreenPalettes ; 3 cycles
+  ld sp, Pico8Palettes ; 3 cycles
 
   ; Prepare the color register (7 cycles)
   ld a, BCPSF_AUTOINC | 0 ; 2 cycles
@@ -193,7 +194,7 @@ REPT 2
   ld [hl], d  ; 2 cycles
 ENDR
 
-  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles)
+  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
   ; ------------------------------------------------------
 
   ; Pre-pop two colors
@@ -206,7 +207,7 @@ ENDR
   bit STATB_BUSY, [hl]
   jr nz, .notHBlank
 
-  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles)
+  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
   ; ------------------------------------------------------
 
   ld l, LOW(rBGPD) ; 2 cycles
@@ -236,16 +237,6 @@ CopyGrayscaleTile:
   ld de, _VRAM + $0FF0
   ld bc, GrayscaleTile.end - GrayscaleTile
   jp CopyData
-
-GreenPalettes:
-  dw $F75B, $E50F, $8102, $8001
-  dw $F75B, $E50F, $8102, $8001
-  dw $F75B, $E50F, $8102, $8001
-  dw $F75B, $E50F, $8102, $8001
-  dw $F75B, $E50F, $8102, $8001
-  dw $F75B, $E50F, $8102, $8001
-  dw $F75B, $E50F, $8102, $8001
-  dw $F75B, $E50F, $8102, $8001
 
 INCLUDE "memory.asm"
 INCLUDE "gfx.asm"
