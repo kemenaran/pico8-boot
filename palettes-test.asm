@@ -65,7 +65,7 @@ EntryPoint:
   call CopyAttrmap
 
   ; Load a grayscale BG palettes set
-  ld hl, DMGPalettes
+  ld hl, GrayscalePalettes
   call CopyBGPalettes
 
   ; Load a single grayscale tile

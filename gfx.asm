@@ -153,7 +153,7 @@ BlackPalettes:
   dw $0000, $0000, $0000, $0000
 
 ; 8 identical DMG-like palettes
-DMGPalettes:
+GrayscalePalettes:
   dw $7FFF, $5EF7, $3DEF, $0000
   dw $7FFF, $5EF7, $3DEF, $0000
   dw $7FFF, $5EF7, $3DEF, $0000
