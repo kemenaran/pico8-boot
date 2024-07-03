@@ -113,7 +113,7 @@ VBlankInterrupt:
   jr z, .enableScanlineInterrupt
   ; One frame after, disable the palette swap code
   cp PALETTE_SWAP_START_VI + 1
-  jr z, .disableScanlineInterrupt
+  jr z, .disableAllInterrupt
   jp .done
 
 .enableScanlineInterrupt
@@ -127,8 +127,8 @@ VBlankInterrupt:
   ldh [rIE], a
   jr .done
 
-.disableScanlineInterrupt
-  ld a, IEF_VBLANK
+.disableAllInterrupt
+  xor 0
   ldh [rIE], a
 
 .done
