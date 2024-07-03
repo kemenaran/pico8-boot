@@ -189,8 +189,8 @@ ScanlineInterruptPopSlide:
 REPT 2
   ; Copy a color (7 cycles)
   pop de      ; 3 cycles
-  ld [hl], d  ; 2 cycles
   ld [hl], e  ; 2 cycles
+  ld [hl], d  ; 2 cycles
 ENDR
 
   ; Mode 3 - Drawing pixels, VRAM locked (86 cycles)
@@ -212,17 +212,17 @@ ENDR
   ld l, LOW(rBGPD) ; 2 cycles
 
   ; Copy the two colors we stored in registers during Mode 3 (8 cycles)
-  ld [hl], b  ; 2 cycles
   ld [hl], c  ; 2 cycles
-  ld [hl], d  ; 2 cycles
+  ld [hl], b  ; 2 cycles
   ld [hl], e  ; 2 cycles
+  ld [hl], d  ; 2 cycles
 
   ; Now copy as much colors as we can
 REPT 12
   ; Copy a color (7 cycles)
   pop de      ; 3 cycles
-  ld [hl], d  ; 2 cycles
   ld [hl], e  ; 2 cycles
+  ld [hl], d  ; 2 cycles
 ENDR
 
   ; Restore the stack pointer and return (12 cycles)
