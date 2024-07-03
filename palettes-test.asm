@@ -1,4 +1,10 @@
-; From https://gbdev.io/gb-asm-tutorial/part1/hello_world.html
+; A test ROM, to see how many palettes colors we can replace during a single HBlank.
+;
+; It loads a repeated stripped tile and a grayscale palette – and 0.5s
+; after enables an HBlank interrupt for 1 frame, which will try to push
+; as many different colors as possible during one scanline.
+;
+; To compile: make palettes-test.gbc
 
 INCLUDE "hardware.inc"
 INCLUDE "constants.asm"
