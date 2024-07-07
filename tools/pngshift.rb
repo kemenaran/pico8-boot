@@ -24,6 +24,16 @@ end
 filename = ARGV.first
 image = ChunkyPNG::Image.from_file(filename)
 (0...image.height).each do |x|
-  image.shift_row!(x, -x)
+  additionnal_offset = [
+    0,
+    1,
+    2,
+    1,
+    0,
+    1,
+    2,
+    1
+  ][x % 8]
+  image.shift_row!(x, -(x - additionnal_offset) - 1)
 end
 image.save(ARGV[1], color_mode: ChunkyPNG::COLOR_INDEXED)
