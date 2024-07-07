@@ -16,9 +16,9 @@ SECTION "Interrupt VBlank", ROM0[$0040]
 
 SECTION "LCD Status interrupt", ROM0[$0048]
   ;jp ScanlineInterruptHardcodedSlide
-  ;jp ScanlineInterruptHardcodedSlideRandom
+  jp ScanlineInterruptHardcodedSlideRandom
   ;jp ScanlineInterruptPopSlide
-  jp ScanlineInterruptPopSlideRandom
+  ;jp ScanlineInterruptPopSlideRandom
 
 SECTION "Header", ROM0[$100]
   jp EntryPoint
@@ -270,39 +270,32 @@ MACRO copy_color_pair_to ; index, color1, color2
 ENDM
 
   copy_color_pair_to 0, C_RED, C_ORANGE
-  ; copy_color_pair_to 3, C_DARK_BLUE, C_BLACK
+  ;copy_color_pair_to 4, C_DARK_BLUE, C_BLACK
 
   copy_color_pair_to 8, C_ORANGE, C_YELLOW
-  ; copy_color_pair_to 6, C_DARK_PURPLE
-  ; copy_color_pair_to 7, C_BLACK
+  ;copy_color_pair_to 12, C_DARK_PURPLE, C_BLACK
 
   copy_color_pair_to 16, C_YELLOW, C_GREEN
-  ; copy_color_pair_to 10, C_DARK_GREEN
-  ; copy_color_pair_to 11, C_BLACK
+  ;copy_color_pair_to 20, C_DARK_GREEN, C_BLACK
 
   copy_color_pair_to 24, C_GREEN, C_BLUE
-  ; copy_color_pair_to 14, C_BROWN
-  ; copy_color_pair_to 15, C_BLACK
+  ;copy_color_pair_to 28, C_BROWN, C_BLACK
 
   copy_color_pair_to 32, C_BLUE, C_LAVENDER
-  ; copy_color_pair_to 18, C_DARK_GREY
-  ; copy_color_pair_to 19, C_BLACK
+  ;copy_color_pair_to 36, C_DARK_GREY, C_BLACK
 
   copy_color_pair_to 40, C_LAVENDER, C_PINK
-  ; copy_color_pair_to 22, C_LIGHT_GREY
-  ; copy_color_pair_to 23, C_BLACK
+  ;copy_color_pair_to 44, C_LIGHT_GREY, C_BLACK
 
   copy_color_pair_to 48, C_PINK, C_LIGHT_PEACH
-  ; copy_color_pair_to 26, C_WHITE
-  ; copy_color_pair_to 27, C_BLACK
+  ;copy_color_pair_to 52, C_WHITE, C_BLACK
 
   copy_color_pair_to 56, C_LIGHT_PEACH, C_RED
-  ; copy_color_pair_to 30, C_DARK_PURPLE
-  ; copy_color_pair_to 31, C_BLACK
+  ;copy_color_pair_to 60, C_DARK_PURPLE, C_BLACK
 
   ;See comment above
-  pop hl
-  pop af
+  ;pop hl
+  ;pop af
   reti ; 4 cycles
 
 ; Popslide version of the scanline interrupt
