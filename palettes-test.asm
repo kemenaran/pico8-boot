@@ -15,8 +15,8 @@ SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
 
 SECTION "LCD Status interrupt", ROM0[$0048]
-  jp ScanlineInterruptPopSlide
-  ;jp ScanlineInterruptHardcodedSlide
+  ;jp ScanlineInterruptPopSlide
+  jp ScanlineInterruptHardcodedSlide
 
 SECTION "Header", ROM0[$100]
   jp EntryPoint
@@ -145,31 +145,82 @@ ScanlineInterruptHardcodedSlide:
   ;push af
   ;push hl
 
-  ; Prepare the color register (4 cycles)
-  ld a, BCPSF_AUTOINC | 0 ; 2 cycles
-  ld [hl+], a ; 2 cycles
+  ; Mode 2 - OAM scan (40 GBC cycles)
+  ; ------------------------------------------------------
 
-  ; Copy a color (8 cycles)
+  ; (ignore this mode 2, as it is for scanline 0, which we don't care about.)
+
+  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
+  ; ------------------------------------------------------
+
+  ; Prepare the color register (4 cycles)
+  ; (assuming hl has been set to rBGPI before the interrupt)
+  ld [hl], BGPIF_AUTOINC | 0  ; 3 cycles
+  inc l ; rBGPD               ; 1 cycles
+
+  ; Macro: copy a color
 MACRO copy_color
-  ld a, HIGH(\1) ; 2 cycles
-  ld [hl], a     ; 2 cycles
-  ld a, LOW(\1)  ; 2 cycles
-  ld [hl], a     ; 2 cycles
+  ld [hl], LOW(\1)  ; 3 cycles
+  ld [hl], HIGH(\1) ; 3 cycles
 ENDM
 
+  ; Wait for HBlank (mode 0)
+  ld hl, rSTAT
+.notHBlank
+  bit STATB_BUSY, [hl]
+  jr nz, .notHBlank
+
+  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
+  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
+  ; Total: 244 GBC cycles
+  ; ------------------------------------------------------
+
   ; Copy as much palettes as we can
-  ld hl, rBGPD   ; 3 cycles
-REPT 4
-  copy_color $F75B
-  copy_color $E50F
-  copy_color $8102
-  copy_color $8001
-ENDR
+  ld l, LOW(rBGPD) ; 2 cycles
+  copy_color C_RED
+  copy_color C_ORANGE
+  copy_color C_DARK_BLUE
+  copy_color C_BLACK
+
+  copy_color C_ORANGE
+  copy_color C_YELLOW
+  copy_color C_DARK_PURPLE
+  copy_color C_BLACK
+
+  copy_color C_YELLOW
+  copy_color C_GREEN
+  copy_color C_DARK_GREEN
+  copy_color C_BLACK
+
+  copy_color C_GREEN
+  copy_color C_BLUE
+  copy_color C_BROWN
+  copy_color C_BLACK
+
+  copy_color C_BLUE
+  copy_color C_LAVENDER
+  copy_color C_DARK_GREY
+  copy_color C_BLACK
+
+  copy_color C_LAVENDER
+  copy_color C_PINK
+  copy_color C_LIGHT_GREY
+  copy_color C_BLACK
+
+  ; copy_color C_PINK
+  ; copy_color C_LIGHT_PEACH
+  ; copy_color C_WHITE
+  ; copy_color C_BLACK
+  ;
+  ; copy_color C_LIGHT_PEACH
+  ; copy_color C_RED
+  ; copy_color C_DARK_PURPLE
+  ; copy_color C_BLACK
 
   ; See comment above
   ;pop hl
   ;pop af
-  reti
+  reti ; 4 cycles
 
 ; Popslide version of the scanline interrupt
 ;
@@ -210,8 +261,8 @@ ScanlineInterruptPopSlide:
 
   ; Prepare the color register (4 cycles)
   ; (assuming hl has been set to rBGPI before the interrupt)
-  ld [hl], BCPSF_AUTOINC | 0 ; 3 cycles
-  inc l ; rBGPD              ; 1 cycles
+  ld [hl], BGPIF_AUTOINC | 0 ; 3 cycles
+  inc l ; rBGPD   ; 1 cycles
 
   ; Pre-pop two colors
   pop bc

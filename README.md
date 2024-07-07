@@ -29,7 +29,10 @@ Issues
 
 
 Hardware infos:
-- We can change up to 20 consecutive colors per scanline (auto-increments means skipping colors is actually more expensive)
+- We can change up to 24 consecutive colors per scanline:
+  - 24 with a fully hardcoded slide
+  - 20 with a popside
+  (auto-increments means skipping colors is actually more expensive)
 - 8 palettes of 3 colors + black is 24 colors.
 
 Clues :
