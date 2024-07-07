@@ -31,9 +31,14 @@ Issues
 Hardware infos:
 - We can change up to 24 consecutive colors per scanline:
   - 24 with a fully hardcoded slide
-  - 20 with a popside
-  (auto-increments means skipping colors is actually more expensive)
-- 8 palettes of 3 colors + black is 24 colors.
+  - 20 with a popslide
+- We can change up to 13 colors with random access per scanline
+- We can change up to 16 color pairs with random access per scanline
+ - 16 with a fully harcoded slide
+ - 15 with a popslide
+
+=> We can change the first 2 colors of each palette on every scanline \o/
+ (The first two colors are variable, then comes the palette dominant color and the color black, which never change.)
 
 Clues :
 

@@ -15,8 +15,10 @@ SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
 
 SECTION "LCD Status interrupt", ROM0[$0048]
+  ;jp ScanlineInterruptHardcodedSlide
+  ;jp ScanlineInterruptHardcodedSlideRandom
   ;jp ScanlineInterruptPopSlide
-  jp ScanlineInterruptHardcodedSlide
+  jp ScanlineInterruptPopSlideRandom
 
 SECTION "Header", ROM0[$100]
   jp EntryPoint
@@ -137,8 +139,8 @@ VBlankInterrupt:
 .done
   reti
 
-; Scanline interrupt with hardcoded color values
-; (unused, as it is slower than a popslide)
+; Scanline interrupt, with hardcoded color values.
+; Faster than a popslide, but takes more space in ROM.
 ScanlineInterruptHardcodedSlide:
   ; In theory we should save registers and restore them at the end of the interrupt,
   ; but let's see if we can get away without for now.
@@ -222,8 +224,89 @@ ENDM
   ;pop af
   reti ; 4 cycles
 
+; Scanline interrupt, with hardcoded color values AND random access.
+ScanlineInterruptHardcodedSlideRandom:
+  ; In theory we should save registers and restore them at the end of the interrupt,
+  ; but let's see if we can get away without for now.
+  ;push af
+  ;push hl
+
+  ; Mode 2 - OAM scan (40 GBC cycles)
+  ; ------------------------------------------------------
+
+  ; (ignore this mode 2, as it is for scanline 0, which we don't care about.)
+
+  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
+  ; ------------------------------------------------------
+
+  ; Prepare the color register
+  ; We don't use auto-increment, as we want random access anyway
+  ld de, rBGPI
+  ld hl, rBGPD
+
+  ; Wait for HBlank (mode 0)
+  ld hl, rSTAT
+.notHBlank
+  bit STATB_BUSY, [hl]
+  jr nz, .notHBlank
+
+  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
+  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
+  ; Total: 244 GBC cycles
+  ; ------------------------------------------------------
+
+  ; Copy as much palettes as we can
+  ld l, LOW(rBGPD) ; 2 cycles
+
+  ; Macro: copy a pair of 2 colors to a specific location
+MACRO copy_color_pair_to ; index, color1, color2
+  ld a, BGPIF_AUTOINC | \1 ; 2 cycles
+  ld [de], a               ; 2 cycles
+
+  ld [hl], LOW(\2)         ; 3 cycles
+  ld [hl], HIGH(\2)        ; 3 cycles
+  ld [hl], LOW(\3)         ; 3 cycles
+  ld [hl], HIGH(\3)        ; 3 cycles
+ENDM
+
+  copy_color_pair_to 0, C_RED, C_ORANGE
+  ; copy_color_pair_to 3, C_DARK_BLUE, C_BLACK
+
+  copy_color_pair_to 8, C_ORANGE, C_YELLOW
+  ; copy_color_pair_to 6, C_DARK_PURPLE
+  ; copy_color_pair_to 7, C_BLACK
+
+  copy_color_pair_to 16, C_YELLOW, C_GREEN
+  ; copy_color_pair_to 10, C_DARK_GREEN
+  ; copy_color_pair_to 11, C_BLACK
+
+  copy_color_pair_to 24, C_GREEN, C_BLUE
+  ; copy_color_pair_to 14, C_BROWN
+  ; copy_color_pair_to 15, C_BLACK
+
+  copy_color_pair_to 32, C_BLUE, C_LAVENDER
+  ; copy_color_pair_to 18, C_DARK_GREY
+  ; copy_color_pair_to 19, C_BLACK
+
+  copy_color_pair_to 40, C_LAVENDER, C_PINK
+  ; copy_color_pair_to 22, C_LIGHT_GREY
+  ; copy_color_pair_to 23, C_BLACK
+
+  copy_color_pair_to 48, C_PINK, C_LIGHT_PEACH
+  ; copy_color_pair_to 26, C_WHITE
+  ; copy_color_pair_to 27, C_BLACK
+
+  copy_color_pair_to 56, C_LIGHT_PEACH, C_RED
+  ; copy_color_pair_to 30, C_DARK_PURPLE
+  ; copy_color_pair_to 31, C_BLACK
+
+  ;See comment above
+  pop hl
+  pop af
+  reti ; 4 cycles
+
 ; Popslide version of the scanline interrupt
-;
+; Slower than a hardcoded slide, but takes less space in ROM.
 ; TODO: maybe optimize using advices from https://forums.nesdev.org/viewtopic.php?t=17232
 
 ;
@@ -294,6 +377,78 @@ REPT 20
   ld [hl], e  ; 2 cycles
   ld [hl], d  ; 2 cycles
 ENDR
+
+  ; Restore the stack pointer and return before the start of mode 3 (12 cycles)
+  ld sp, hStackPointer  ; 3 cycles
+  pop hl                ; 3 cycles
+  ld sp, hl             ; 2 cycles
+  reti                  ; 4 cycles
+
+; Popslide version of the scanline interrupt, with random palette access
+ScanlineInterruptPopSlideRandom:
+  ; Mode 2 - OAM scan (40 GBC cycles)
+  ; ------------------------------------------------------
+
+  ; (ignore this mode 2, as it is for scanline 0, which we don't care about.)
+
+  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
+  ; ------------------------------------------------------
+
+  ; Save the stack pointer
+  ld [hStackPointer], sp ; 5 cycles
+
+  ; Move the stack pointer to the beginning of the palettes set
+  ld sp, Pico8Palettes ; 3 cycles
+
+  ; Prepare the color register (4 cycles)
+  ; (assuming hl has been set to rBGPI before the interrupt)
+  ld [hl], BGPIF_AUTOINC | 0 ; 3 cycles
+  inc l ; rBGPD   ; 1 cycles
+
+  ; Pre-pop two colors
+  pop bc
+  pop de
+
+  ; Wait for HBlank (mode 0)
+  ld hl, rSTAT
+.notHBlank
+  bit STATB_BUSY, [hl]
+  jr nz, .notHBlank
+
+  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
+  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
+  ; Total: 244 GBC cycles
+  ; ------------------------------------------------------
+
+  ld l, LOW(rBGPD) ; 2 cycles
+
+  ; Copy the two colors we stored in registers during Mode 3 (8 cycles)
+  ld [hl], c  ; 2 cycles
+  ld [hl], b  ; 2 cycles
+  ld [hl], e  ; 2 cycles
+  ld [hl], d  ; 2 cycles
+
+  ; Macro: copy the next pair of 2 colors to a specific location
+MACRO copy_next_color_pair_to ; index
+  dec l                       ; 1 cycle
+  ld [hl], BGPIF_AUTOINC | \1 ; 3 cycles
+  inc l                       ; 1 cycle
+  pop de
+  ld [hl], e        ; 3 cycles
+  ld [hl], d        ; 3 cycles
+  pop de
+  ld [hl], e        ; 3 cycles
+  ld [hl], d        ; 3 cycles
+ENDM
+
+  ; Now copy as much colors as we can
+  copy_next_color_pair_to 8
+  copy_next_color_pair_to 16
+  copy_next_color_pair_to 24
+  copy_next_color_pair_to 32
+  copy_next_color_pair_to 40
+  copy_next_color_pair_to 48
+  copy_next_color_pair_to 56
 
   ; Restore the stack pointer and return before the start of mode 3 (12 cycles)
   ld sp, hStackPointer  ; 3 cycles
