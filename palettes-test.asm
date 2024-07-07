@@ -98,6 +98,9 @@ MainLoop:
   cp 144
   jr c, .ensureVBlank
 
+  ; Prepare registers for the LCDStat interrupt
+  ld hl, rBGPI
+
   ; Loop
   jp MainLoop
 
@@ -113,7 +116,7 @@ VBlankInterrupt:
   jr z, .enableScanlineInterrupt
   ; One frame after, disable the palette swap code
   cp PALETTE_SWAP_START_VI + 1
-  jr z, .disableAllInterrupt
+  jr z, .disableScanlineInterrupt
   jp .done
 
 .enableScanlineInterrupt
@@ -127,8 +130,8 @@ VBlankInterrupt:
   ldh [rIE], a
   jr .done
 
-.disableAllInterrupt
-  xor 0
+.disableScanlineInterrupt
+  ld a, IEF_VBLANK
   ldh [rIE], a
 
 .done
@@ -142,9 +145,9 @@ ScanlineInterruptHardcodedSlide:
   ;push af
   ;push hl
 
-  ; Prepare the color register
-  ld a, BCPSF_AUTOINC | 0
-  ldh [rBGPI], a
+  ; Prepare the color register (4 cycles)
+  ld a, BCPSF_AUTOINC | 0 ; 2 cycles
+  ld [hl+], a ; 2 cycles
 
   ; Copy a color (8 cycles)
 MACRO copy_color
@@ -169,11 +172,35 @@ ENDR
   reti
 
 ; Popslide version of the scanline interrupt
+;
+; TODO: maybe optimize using advices from https://forums.nesdev.org/viewtopic.php?t=17232
+
+;
+;
+; di/halt will almost certainly squeeze out 1 more color. Your worst case scenario with the overhead from a busycheck is this:
+; bit STATB_BUSY, [hl]
+; ; change happens here
+; jr nz ; taken, 3
+; bit STATB_BUSY, [hl] ; 3
+; jr nz ; not taken, 2
+; ld l ; redundant with no dependence on hl for the wait, 2
+;
+; So that's 10 cycles that could be freed up from the worst case.
+;
+; You could also calculate/figure out the exact number of cycles to wait instead of relying on either polling or halt. This might give a 1 cycle or something advantage over halt not sure.
+;
+; You might also prepopulate a before waiting for HBlank. This might seem useless since 1 byte is only half a color, but maybe this will turn out to give room for one last pop de/ld [hl],e and then d might be save to seed the next prepopulated a. This is speculative though, just bouncing ideas.
+;
+; (The exact wait approach would still require a halt initially for synchronization.)
+;
 ScanlineInterruptPopSlide:
   ; Mode 2 - OAM scan (40 GBC cycles)
   ; ------------------------------------------------------
 
-  ; (called the interrupt handler - 5 cycles)
+  ; (ignore this mode 2, as it is for scanline 0, which we don't care about.)
+
+  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
+  ; ------------------------------------------------------
 
   ; Save the stack pointer
   ld [hStackPointer], sp ; 5 cycles
@@ -181,21 +208,10 @@ ScanlineInterruptPopSlide:
   ; Move the stack pointer to the beginning of the palettes set
   ld sp, Pico8Palettes ; 3 cycles
 
-  ; Prepare the color register (7 cycles)
-  ld a, BCPSF_AUTOINC | 0 ; 2 cycles
-  ldh [rBGPI], a          ; 3 cycles
-  ld l, LOW(rBGPD)        ; 2 cycles
-
-  ; Push some bytes before the end of Mode 2
-REPT 2
-  ; Copy a color (7 cycles)
-  pop de      ; 3 cycles
-  ld [hl], e  ; 2 cycles
-  ld [hl], d  ; 2 cycles
-ENDR
-
-  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
-  ; ------------------------------------------------------
+  ; Prepare the color register (4 cycles)
+  ; (assuming hl has been set to rBGPI before the interrupt)
+  ld [hl], BCPSF_AUTOINC | 0 ; 3 cycles
+  inc l ; rBGPD              ; 1 cycles
 
   ; Pre-pop two colors
   pop bc
@@ -208,6 +224,8 @@ ENDR
   jr nz, .notHBlank
 
   ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
+  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
+  ; Total: 244 GBC cycles
   ; ------------------------------------------------------
 
   ld l, LOW(rBGPD) ; 2 cycles
@@ -219,14 +237,14 @@ ENDR
   ld [hl], d  ; 2 cycles
 
   ; Now copy as much colors as we can
-REPT 12
+REPT 20
   ; Copy a color (7 cycles)
   pop de      ; 3 cycles
   ld [hl], e  ; 2 cycles
   ld [hl], d  ; 2 cycles
 ENDR
 
-  ; Restore the stack pointer and return (12 cycles)
+  ; Restore the stack pointer and return before the start of mode 3 (12 cycles)
   ld sp, hStackPointer  ; 3 cycles
   pop hl                ; 3 cycles
   ld sp, hl             ; 2 cycles

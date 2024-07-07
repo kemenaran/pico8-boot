@@ -5,11 +5,11 @@ Implementation
 
 The boot animation is composed of 6 frames.
 
-Each frames changes the color of many pixels – but the palette itself never changes (it is a fixed set of 32 colors).
+Each frames changes the color of many pixels – but the palette itself never changes (it is a fixed set of 14 colors).
 
 To achieve the effect:
 
-- On each line (hblank), the BG tile attributes are DMA-ed to reference the proper colors. There's 16 bytes to transfer.
+- On each line (hblank), the palettes are partially updated to reflect the colors of the next scanline
   _This allows to display 4 colors per 8x1 line (instead of 4 colors per 8x8 block)._
 - On each frame (vblank), the BG tile data is updated with the new pixels.
 
@@ -17,15 +17,20 @@ Issues
 ======
 
 - It takes a while to load the tileset and tilemap.
- If needed, we can HDMA them during HBlank (one tile per scanline)
+ That's ok: the animation is fast, but still has several frames of pause between each frame, during
+ which we can transfer data.
 
-- On the original boot animation, somes 8x1 lines feature 5 differents colors (4 colors + black backround). The GBC is limited to 4 colors per 8x1 line
+- On the original boot animation, somes 8x1 lines feature 5 differents colors (4 colors + black backround). The GBC is limited to 4 colors per 8x1 line.
+ That's ok: shifting the original image by row_count + [0,1,2,1,0] pixels yields a vertical image that
+ has maximum 3 different colors per pixel. It also makes the image repeating horizontally, which helps to reduce the number of tiles and palettes. The hblank interrupt just needs to scroll to the correct position though.
+
 - Although we can change the palette or tile attributes on each scanline, each 8x1 line would need to pick one of the 8 available palettes. So all 16 pixels blocks on a line would need to share 8 palettes.
+ That's ok: we can mirror the image horizontally, so that's one palette for each 8 8x1 line.
+
 
 Hardware infos:
-- We can change up to 23 colors per scanline (maybe more if we skip black)
+- We can change up to 20 consecutive colors per scanline (auto-increments means skipping colors is actually more expensive)
 - 8 palettes of 3 colors + black is 24 colors.
-- So we can change almost all colors during H-blank
 
 Clues :
 
@@ -37,7 +42,10 @@ Transforming the original image:
 1. Copy the first column of pixels to the last, to restore symetry    ;
 2. Translate the image by 1px, for tiles to be aligned to a 8x8 grid  ; both reduce cases of 5 colors per 8x1 to 4
 3. Crop half of the image, and duplicate it on render (reduce number of palettes per scanline from max 16 to max 8)
-4. TODO: Rotate the original artwork by 1px every line, and back-correct by changing the X-scroll of 1px during HBLANK (see if it helps to reduce the line-by-line diff)
+4. Rotate the original artwork by row_count + [0,1,2,1,0] every line, and back-correct by changing the X-scroll of 1px during HBlank. It reduces reduce cases of 4 colors per 8x1 to 3.
+
+- What if we alternate between two different BG map on each scanline? Would that reproduce the "two images merged together" look of the original pictures?
+
 
 Tools
 =====
