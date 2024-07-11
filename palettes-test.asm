@@ -415,6 +415,9 @@ ScanlineInterruptPopSlideRandom:
   ; (We're in an interrupt handler, so interrupts are already disabled)
   ; di
 
+  ; Prepare the scroll register
+  xor a
+
   ; Wait for HBlank (STAT mode 0)
   halt
   ; no need for a nop, as we're pretty sure no enabled interrupt was serviced during the halt
@@ -423,6 +426,9 @@ ScanlineInterruptPopSlideRandom:
   ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
   ; Total: 244 GBC cycles
   ; ------------------------------------------------------
+
+  ; Set the X scroll register
+  ldh [rSCX], a ; 3 cycles
 
   ; Copy the two colors we stored in registers during Mode 3 (8 cycles)
   ld [hl], c  ; 2 cycles
