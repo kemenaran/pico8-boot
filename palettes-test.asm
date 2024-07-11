@@ -16,9 +16,9 @@ SECTION "Interrupt VBlank", ROM0[$0040]
 
 SECTION "LCD Status interrupt", ROM0[$0048]
   ;jp ScanlineInterruptHardcodedSlide
-  jp ScanlineInterruptHardcodedSlideRandom
+  ;jp ScanlineInterruptHardcodedSlideRandom
   ;jp ScanlineInterruptPopSlide
-  ;jp ScanlineInterruptPopSlideRandom
+  jp ScanlineInterruptPopSlideRandom
 
 SECTION "Header", ROM0[$100]
   jp EntryPoint
@@ -225,6 +225,7 @@ ENDM
   reti ; 4 cycles
 
 ; Scanline interrupt, with hardcoded color values AND random access.
+; Can copy up to 9 color pairs (18 colors) with random access per scanline (Mode 0 + Mode 2)
 ScanlineInterruptHardcodedSlideRandom:
   ; In theory we should save registers and restore them at the end of the interrupt,
   ; but let's see if we can get away without for now.
@@ -239,24 +240,36 @@ ScanlineInterruptHardcodedSlideRandom:
   ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
   ; ------------------------------------------------------
 
-  ; Prepare the color register
-  ; We don't use auto-increment, as we want random access anyway
+  ; Prepare the color registers
   ld de, rBGPI
   ld hl, rBGPD
 
-  ; Wait for HBlank (mode 0)
-  ld hl, rSTAT
-.notHBlank
-  bit STATB_BUSY, [hl]
-  jr nz, .notHBlank
+  ; Set the initial palettes register index
+  ld a, BGPIF_AUTOINC | 0 ; 2 cycles
+  ld [de], a              ; 2 cycles
+
+  ; Request an exit of `halt` on mode 0
+  ld a, STATF_MODE00
+  ldh [rSTAT], a
+  ld a, IEF_STAT
+  ldh [rIE], a
+  ; (We're in an interrupt handler, so interrupts are already disabled)
+  ; di
+
+  ; Wait for HBlank (STAT mode 0)
+  halt
+  ; no need for a nop, as we're pretty sure no enabled interrupt was serviced during the halt
 
   ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
   ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
   ; Total: 244 GBC cycles
   ; ------------------------------------------------------
 
-  ; Copy as much palettes as we can
-  ld l, LOW(rBGPD) ; 2 cycles
+  ; Copy the first pair of colors, using the pre-configured register index
+  ld [hl], LOW(C_RED)
+  ld [hl], HIGH(C_RED)
+  ld [hl], LOW(C_ORANGE)
+  ld [hl], HIGH(C_ORANGE)
 
   ; Macro: copy a pair of 2 colors to a specific location
 MACRO copy_color_pair_to ; index, color1, color2
@@ -269,7 +282,8 @@ MACRO copy_color_pair_to ; index, color1, color2
   ld [hl], HIGH(\3)        ; 3 cycles
 ENDM
 
-  copy_color_pair_to 0, C_RED, C_ORANGE
+  ; Copy the rest of the colors (with random access)
+  ;copy_color_pair_to 0, C_RED, C_ORANGE
   ;copy_color_pair_to 4, C_DARK_BLUE, C_BLACK
 
   copy_color_pair_to 8, C_ORANGE, C_YELLOW
@@ -293,6 +307,15 @@ ENDM
   copy_color_pair_to 56, C_LIGHT_PEACH, C_RED
   ;copy_color_pair_to 60, C_DARK_PURPLE, C_BLACK
 
+  ; Manually mark the STAT Mode 0 interrupt as serviced
+  ; (as IME was disabled, it wasn't done automatically by the CPU)
+  ld hl, rIF         ;
+  res IEB_STAT, [hl] ; 4 cycles
+
+  ; Restore interrupts (5 cycles)
+  ld a, IEF_VBLANK      ; 2 cycles
+  ldh [rIE], a          ; 3 cycles
+
   ;See comment above
   ;pop hl
   ;pop af
@@ -301,25 +324,6 @@ ENDM
 ; Popslide version of the scanline interrupt
 ; Slower than a hardcoded slide, but takes less space in ROM.
 ; TODO: maybe optimize using advices from https://forums.nesdev.org/viewtopic.php?t=17232
-
-;
-;
-; di/halt will almost certainly squeeze out 1 more color. Your worst case scenario with the overhead from a busycheck is this:
-; bit STATB_BUSY, [hl]
-; ; change happens here
-; jr nz ; taken, 3
-; bit STATB_BUSY, [hl] ; 3
-; jr nz ; not taken, 2
-; ld l ; redundant with no dependence on hl for the wait, 2
-;
-; So that's 10 cycles that could be freed up from the worst case.
-;
-; You could also calculate/figure out the exact number of cycles to wait instead of relying on either polling or halt. This might give a 1 cycle or something advantage over halt not sure.
-;
-; You might also prepopulate a before waiting for HBlank. This might seem useless since 1 byte is only half a color, but maybe this will turn out to give room for one last pop de/ld [hl],e and then d might be save to seed the next prepopulated a. This is speculative though, just bouncing ideas.
-;
-; (The exact wait approach would still require a halt initially for synchronization.)
-;
 ScanlineInterruptPopSlide:
   ; Mode 2 - OAM scan (40 GBC cycles)
   ; ------------------------------------------------------
@@ -377,7 +381,8 @@ ENDR
   ld sp, hl             ; 2 cycles
   reti                  ; 4 cycles
 
-; Popslide version of the scanline interrupt, with random palette access
+; Popslide version of the scanline interrupt, with random palette access.
+; Can copy up to 8 color pairs (16 colors) with random access per scanline (Mode 0 + Mode 2)
 ScanlineInterruptPopSlideRandom:
   ; Mode 2 - OAM scan (40 GBC cycles)
   ; ------------------------------------------------------
@@ -402,18 +407,22 @@ ScanlineInterruptPopSlideRandom:
   pop bc
   pop de
 
-  ; Wait for HBlank (mode 0)
-  ld hl, rSTAT
-.notHBlank
-  bit STATB_BUSY, [hl]
-  jr nz, .notHBlank
+  ; Request an exit of `halt` on mode 0
+  ld a, STATF_MODE00
+  ldh [rSTAT], a
+  ld a, IEF_STAT
+  ldh [rIE], a
+  ; (We're in an interrupt handler, so interrupts are already disabled)
+  ; di
+
+  ; Wait for HBlank (STAT mode 0)
+  halt
+  ; no need for a nop, as we're pretty sure no enabled interrupt was serviced during the halt
 
   ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
   ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
   ; Total: 244 GBC cycles
   ; ------------------------------------------------------
-
-  ld l, LOW(rBGPD) ; 2 cycles
 
   ; Copy the two colors we stored in registers during Mode 3 (8 cycles)
   ld [hl], c  ; 2 cycles
@@ -443,10 +452,21 @@ ENDM
   copy_next_color_pair_to 48
   copy_next_color_pair_to 56
 
-  ; Restore the stack pointer and return before the start of mode 3 (12 cycles)
+  ; Manually mark the STAT Mode 0 interrupt as serviced
+  ; (as IME was disabled, it wasn't done automatically by the CPU)
+  ld hl, rIF         ;
+  res IEB_STAT, [hl] ; 4 cycles
+
+  ; Restore the stack pointer (8 cycles)
   ld sp, hStackPointer  ; 3 cycles
   pop hl                ; 3 cycles
   ld sp, hl             ; 2 cycles
+
+  ; Restore interrupts (5 cycles)
+  ld a, IEF_VBLANK      ; 2 cycles
+  ldh [rIE], a          ; 3 cycles
+
+  ; Return (4 cycles)
   reti                  ; 4 cycles
 
 CopyGrayscaleTile:

@@ -33,9 +33,9 @@ Hardware infos:
   - 24 with a fully hardcoded slide
   - 20 with a popslide
 - We can change up to 13 colors with random access per scanline
-- We can change up to 17 color pairs with random access per scanline
- - 17 with a fully harcoded slide
- - 15 with a popslide (may be optimized)
+- We can change up to 9 color pairs (18 colors total) with random access per scanline
+ - 18 with a fully harcoded slide
+ - 16 with a popslide
 
 => We can change the first 2 colors of each palette on every scanline \o/
  (The first two colors are variable, then comes the palette dominant color and the color black, which never change.)
