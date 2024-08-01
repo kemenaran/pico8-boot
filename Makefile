@@ -11,7 +11,7 @@ gfx_files = $(shell find ./gfx -type f -name '*.png')
 
 # Compile an ASM file into an object file
 %.o: %.asm $(asm_files) $(gfx_files:.png=.2bpp)
-	rgbasm --export-all --halt-without-nop --preserve-ld -o $@ $<
+	rgbasm --export-all -o $@ $<
 
 # Build the demo ROM
 pico8-boot.gbc: main.o
