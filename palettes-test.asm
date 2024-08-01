@@ -11,6 +11,7 @@ INCLUDE "pico8.inc"
 INCLUDE "constants.asm"
 
 DEF PALETTE_SWAP_START_VI EQU 30
+DEF INTERRUPT_LOOP_LAST_SCANLINE EQU 128
 
 SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
@@ -123,14 +124,17 @@ VBlankInterrupt:
   jp .done
 
 .enableScanlineInterrupt
-  ; Trigger the scanline interrupt on LYC == 1
+  ; Trigger the scanline interrupt on LYC == 0
   ld a, STATF_LYC
   ldh [rSTAT], a
-  ld a, 1
+  ld a, 0
   ldh [rLYC], a
   ; Enable the scanline interrupt
   ld a, IEF_VBLANK | IEF_STAT
   ldh [rIE], a
+  ; Load the palette for scanline 0
+  ld hl, InitialPalettesSet
+  call CopyBGPalettes
   jr .done
 
 .disableScanlineInterrupt
@@ -324,7 +328,6 @@ ENDM
 
 ; Popslide version of the scanline interrupt
 ; Slower than a hardcoded slide, but takes less space in ROM.
-; TODO: maybe optimize using advices from https://forums.nesdev.org/viewtopic.php?t=17232
 ScanlineInterruptPopSlide:
   ; Mode 2 - OAM scan (40 GBC cycles)
   ; ------------------------------------------------------
@@ -386,35 +389,35 @@ ENDR
 ; Can copy up to 8 color pairs (16 colors) with random access per scanline (Mode 0 + Mode 2)
 ScanlineInterruptPopSlideRandom:
   ; Mode 2 - OAM scan (40 GBC cycles)
-  ; ------------------------------------------------------
-
-  ; (ignore this mode 2, as it is for scanline 0, which we don't care about.)
-
-  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
+  ; Initial mode 2 of line 0: use it to prepare the main loop.
   ; ------------------------------------------------------
 
   ; Save the stack pointer
   ld [hStackPointer], sp ; 5 cycles
 
-  ; Move the stack pointer to the beginning of the palettes set
-  ld sp, Pico8Palettes ; 3 cycles
+  ; Move the stack pointer to the beginning of the palettes set diffs
+  ld sp, PalettesDiffForScanline._1 ; 3 cycles
 
-  ; Prepare the color register (4 cycles)
-  ; (assuming hl has been set to rBGPI before the interrupt)
-  ld [hl], BGPIF_AUTOINC | 0 ; 3 cycles
-  inc l ; rBGPD   ; 1 cycles
-
-  ; Pre-pop two colors
-  pop bc
-  pop de
-
-  ; Request an exit of `halt` on mode 0
+  ; Request an exit of `halt` on mode 0 (HBlank)
   ld a, STATF_MODE00
   ldh [rSTAT], a
   ld a, IEF_STAT
   ldh [rIE], a
   ; (We're in an interrupt handler, so interrupts are already disabled)
   ; di
+
+.scanlineLoop
+  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
+  ; ------------------------------------------------------
+
+  ; Prepare the color register (4 cycles)
+  ld hl, rBGPI
+  ld [hl], BGPIF_AUTOINC | 0 ; 3 cycles
+  inc l ; rBGPD   ; 1 cycles
+
+  ; Pre-pop two colors
+  pop bc
+  pop de
 
   ; Prepare the scroll register
   xor a
@@ -424,8 +427,6 @@ ScanlineInterruptPopSlideRandom:
   ; no need for a nop, as we're pretty sure no enabled interrupt was serviced during the halt
 
   ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
-  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
-  ; Total: 244 GBC cycles
   ; ------------------------------------------------------
 
   ; Set the X scroll register
@@ -451,18 +452,33 @@ MACRO copy_next_color_pair_to ; index
 ENDM
 
   ; Now copy as much colors as we can
+  ; (unrolling the loop with a macro)
   copy_next_color_pair_to 8
   copy_next_color_pair_to 16
   copy_next_color_pair_to 24
   copy_next_color_pair_to 32
   copy_next_color_pair_to 40
+
+  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
+  ; ------------------------------------------------------
+
   copy_next_color_pair_to 48
   copy_next_color_pair_to 56
+
+  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
+  ; ------------------------------------------------------
 
   ; Manually mark the STAT Mode 0 interrupt as serviced
   ; (as IME was disabled, it wasn't done automatically by the CPU)
   ld hl, rIF         ;
   res IEB_STAT, [hl] ; 4 cycles
+
+  ; Repeat for all scanlines
+  ldh a, [rLY]
+  cp INTERRUPT_LOOP_LAST_SCANLINE
+  jp nz, .scanlineLoop
+
+  ; We reached the end of scanlines, and entered the VBlank period.
 
   ; Restore the stack pointer (8 cycles)
   ld sp, hStackPointer  ; 3 cycles
@@ -484,6 +500,7 @@ CopyGrayscaleTile:
 
 INCLUDE "memory.asm"
 INCLUDE "gfx.asm"
+INCLUDE "gfx/4.palettes.asm"
 
 ; -------------------------------------------------------------------------------
 SECTION "Tilesets - frame 1-4", ROMX, BANK[$01]
