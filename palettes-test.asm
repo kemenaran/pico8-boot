@@ -117,11 +117,7 @@ VBlankInterrupt:
   ; If we reached the demo start, enable the palette swap code
   ld a, [hVICount]
   cp PALETTE_SWAP_START_VI
-  jr z, .enableScanlineInterrupt
-  ; One frame after, disable the palette swap code
-  cp PALETTE_SWAP_START_VI + 1
-  jr z, .disableScanlineInterrupt
-  jp .done
+  jr nz, .done
 
 .enableScanlineInterrupt
   ; Trigger the scanline interrupt on LYC == 0
@@ -132,14 +128,10 @@ VBlankInterrupt:
   ; Enable the scanline interrupt
   ld a, IEF_VBLANK | IEF_STAT
   ldh [rIE], a
+
   ; Load the palette for scanline 0
   ld hl, InitialPalettesSet
   call CopyBGPalettes
-  jr .done
-
-.disableScanlineInterrupt
-  ld a, IEF_VBLANK
-  ldh [rIE], a
 
 .done
   reti
@@ -486,7 +478,7 @@ ENDM
   ld sp, hl             ; 2 cycles
 
   ; Restore interrupts (5 cycles)
-  ld a, IEF_VBLANK      ; 2 cycles
+  ld a, IEF_VBLANK | IEF_STAT ; 2 cycles
   ldh [rIE], a          ; 3 cycles
 
   ; Return (4 cycles)
