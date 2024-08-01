@@ -1,6 +1,7 @@
 ; From https://gbdev.io/gb-asm-tutorial/part1/hello_world.html
 
 INCLUDE "hardware.inc"
+INCLUDE "pico8.inc"
 INCLUDE "constants.asm"
 
 SECTION "Interrupt VBlank", ROM0[$0040]

@@ -7,6 +7,7 @@
 ; To compile: make palettes-test.gbc
 
 INCLUDE "hardware.inc"
+INCLUDE "pico8.inc"
 INCLUDE "constants.asm"
 
 DEF PALETTE_SWAP_START_VI EQU 30
