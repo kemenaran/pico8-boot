@@ -6,77 +6,7 @@
 #   tools/pngstats.rb <filename.png>
 
 require "debug"
-
-begin
-  require "chunky_png"
-rescue
-  # Download and install dependencies
-  require "bundler/inline"
-  gemfile do
-    source "https://rubygems.org"
-    gem "chunky_png"
-  end
-end
-
-# Add extension methods to the image class
-class ChunkyPNG::Image
-  TILE_WIDTH = 8
-  TILE_HEIGHT = 8
-  TILE_SIZE = 64
-
-  def tiles_count
-    width * height / TILE_SIZE
-  end
-
-  # Return the n-th 8x8 pixels tile in the picture
-  # (Read from left-to-right, top-to-bottom)
-  # @return [Array]
-  def tile(n)
-    tile = Array.new()
-    tiles_per_row = width / TILE_WIDTH
-    row = (n / tiles_per_row)
-    column = (n % tiles_per_row)
-    (0...TILE_WIDTH).each do |i|
-      row_start = (row * width + column) * TILE_WIDTH + (i * width)
-      tile.concat(pixels[row_start...(row_start + TILE_WIDTH)])
-    end
-    tile
-  end
-
-  # Return an array of all pixels in the image, grouped into 8x8px tiles
-  # @return [Array<Array>]
-  def tiles
-    @tiles ||= (0...tiles_count).map { |i| tile(i) }
-  end
-
-  # def row(r, total: n)
-  #   tiles_per_row = tiles.length / n
-  #   tiles.
-  # end
-
-  # Return all tiles for the given column
-  # @return [Array<Array>]
-  def column(c, total:)
-    tiles_per_row = tiles.length / total
-    tiles.each_slice(tiles_per_row).map { |row| row[c] }
-  end
-
-  # Return the n-th 8x1 pixels tile row in the picture
-  # (Read from left-to-right, top-to-bottom)
-  # @return [Array]
-  def tile_row(n)
-    tiles_per_row = width / TILE_WIDTH
-    row = (n / tiles_per_row)
-    column = (n % tiles_per_row)
-    row_start = row * width + column * TILE_WIDTH
-    pixels[row_start...(row_start + TILE_WIDTH)]
-  end
-
-  def tile_rows
-    tile_rows_count = tiles_count * 8
-    @tile_rows ||= (0...tile_rows_count).map { |i| tile_row(i) }
-  end
-end
+require_relative "lib/chunky-png-image-ext"
 
 def puts_square(enumerable)
   enumerable.each_slice(16) { |slice| puts slice.join(' ') }
@@ -112,10 +42,9 @@ puts color_count_per_tile_row.max
 # palette_count_per_scanline.each { |c| puts c }
 
 puts "Most frequent colors by column:"
-COLUMNS_COUNT = 16
 8.times do |i|
   colors_tally = image
-    .column(i, total: COLUMNS_COUNT)
+    .column(i)
     .flatten
     .tally
     .sort_by { |_, value| value }
