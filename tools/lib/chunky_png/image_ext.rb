@@ -1,4 +1,18 @@
 class ChunkyPNG::Image
+  def self.from_pixels(width, height, pixels)
+    from_rgba_stream(width, height, pixels.pack("NX" * pixels.length))
+  end
+
+  # Return an enumerator that yields each row as an array of pixels.
+  # @return [Enumerator]
+  def rows
+    if block_given?
+      (0...height).each { |i| yield row(i) }
+    else
+      to_enum(:rows)
+    end
+  end
+
   TILE_WIDTH = 8
   TILE_HEIGHT = 8
   TILE_SIZE = 64

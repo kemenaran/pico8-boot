@@ -45,6 +45,15 @@ class Palette
     super.tap { |new_palette| new_palette.instance_variable_set(:@colors, colors.dup) }
   end
 
+  # Operations
+
+  def transpose(color, into:)
+    other_palette = into
+    index_in_palette = @colors.index(color)
+    raise "Color \"#{ChunkyPNG::Color.to_hex(color, false)}\" not found in #{inspect}" if index_in_palette.nil?
+    other_palette.colors[index_in_palette]
+  end
+
   # Fixed and variable parts support
 
   def variable_colors

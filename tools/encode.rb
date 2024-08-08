@@ -5,21 +5,27 @@
 # - A list of color pairs to be updated on each scanline.
 #
 # Usage:
-#   tools/encode.rb <filename.png>
+#   tools/encode.rb --output-palettes palettes.asm --output-png 2bpp.png <source_image.png>
 
 require "debug"
 require "logger"
 require "optparse"
 require_relative "lib/chunky_png"
 require_relative "lib/palette"
+require_relative "lib/enumerator/with_coordinates"
 
 logger = Logger.new(STDERR)
 logger.level = Logger::UNKNOWN
 
+options = {}
 OptionParser.new do |opts|
   opts.banner = "Usage: tools/encode.rb [--verbose] input_image.png"
   opts.on('-v', '--verbose') { |o| logger.level = Logger::DEBUG }
+  opts.on('-p FILENAME', '--output-palettes FILENAME') { |filename| options[:output_palettes] = filename }
+  opts.on('-b FILENAME', '--output-png FILENAME') { |filename| options[:output_png] = filename }
 end.parse!
+
+logger.debug({options:, ARGV:})
 
 # 1. Open the source image
 filename = ARGV.first
@@ -27,8 +33,8 @@ image = ChunkyPNG::Image.from_file(filename)
 
 # 2. Crop it to the first 8 columns
 # (the source image is assumed to be repeating after than)
-columns_count = 8
-image.crop!(0, 0, columns_count * ChunkyPNG::Image::TILE_WIDTH, image.height)
+COLUMNS_COUNT = 8
+image.crop!(0, 0, COLUMNS_COUNT * ChunkyPNG::Image::TILE_WIDTH, image.height)
 
 # 3. Build the fixed part of the palettes.
 #
@@ -39,7 +45,7 @@ image.crop!(0, 0, columns_count * ChunkyPNG::Image::TILE_WIDTH, image.height)
 # Build the fixed part of each palette, by computing the most frequent colors of each column.
 initial_palettes_set = []
 # For each column (we only take the first 8, as the picture will be mirrored)
-columns_count.times do |i|
+COLUMNS_COUNT.times do |i|
   # Compute the two most frequent colors in this column
   most_frequent_colors = image
     .column(i)
@@ -59,40 +65,48 @@ end
 initial_palettes_set.freeze
 
 # 4. Complete the palettes set for each scanline with the variable colors
-palettes_sets_for_line = []
-lines = image.height
-lines.times do |i|
+palettes_sets_for_line = image.rows.map do |row|
   # Initialize this line's palettes set with the fixed colors
   line_palettes_set = initial_palettes_set.map(&:dup)
   # For each 8 pixels span of the line…
-  image.row(i).each_slice(8).with_index do |tile_row_pixels, column|
+  row.each_slice(8).with_index do |tile_row_pixels, column|
     # Add the required colors to render this span to the palette.
     # (This will raise if the span require more than 4 colors)
-    palette_for_column = line_palettes_set[column]
-    tile_row_pixels.each { |pixel_color| palette_for_column << pixel_color }
+    column_palette = line_palettes_set[column]
+    tile_row_pixels.each { |pixel_color| column_palette << pixel_color }
   end
-  palettes_sets_for_line[i] = line_palettes_set
+  line_palettes_set
 end
 
-#test_line_index = 3
-#puts "Palettes set for line #{test_line_index}:\n#{palettes_sets_for_line[test_line_index].map(&:inspect).join("\n")}"
-
-#indexed_image = IndexedImage.new(width: image.width, height: image.height)
-
-# 5. Output the palettes to an assembly text file
-MAGENTA = ChunkyPNG::Color.from_hex("#CB006A")
-# Write the palettes set for line 0
-$stdout.puts("InitialPalettesSet:")
-initial_palettes_set.map(&:dup).each do |initial_palette|
-  $stdout.puts("  dw #{initial_palette.colors_with_default(MAGENTA).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
+# 5. Output the 2bpp resulting image
+if options[:output_png]
+  image_2bpp = ChunkyPNG::Image.new(image.width, image.height)
+  palette_2bpp = Palette.new([0, 86, 172, 255].map(&ChunkyPNG::Color.method(:grayscale)))
+  image.pixels.each.with_coordinates(image.width) do |pixel, x, y|
+    column_palette = palettes_sets_for_line[y][x / ChunkyPNG::Image::TILE_WIDTH]
+    indexed_pixel = column_palette.transpose(pixel, into: palette_2bpp)
+    image_2bpp.set_pixel(x, y, indexed_pixel)
+  end
+  image_2bpp.save(options[:output_png], bit_depth: 2)
 end
 
-# Write colors pairs to update on each scanline
-$stdout.puts("")
-$stdout.puts("PalettesDiffForScanline:")
-palettes_sets_for_line.each.with_index do |palettes_set_for_scanline, line|
-  $stdout.puts "._#{line}"
-  palettes_set_for_scanline.each do |palette|
-    $stdout.puts("  dw #{palette.colors_with_default(MAGENTA).take(2).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
+# 6. Output the palettes for each line to an assembly text file
+if options[:output_palettes]
+  MAGENTA = ChunkyPNG::Color.from_hex("#CB006A")
+  File.open(options[:output_palettes], "w") do |f|
+    # Write the palettes set for line 0
+    f.puts("InitialPalettesSet:")
+    initial_palettes_set.map(&:dup).each do |initial_palette|
+      f.puts("  dw #{initial_palette.colors_with_default(MAGENTA).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
+    end
+    # Write colors pairs to update on each scanline
+    f.puts("")
+    f.puts("PalettesDiffForScanline:")
+    palettes_sets_for_line.each.with_index do |palettes_set_for_scanline, line|
+      f.puts "._#{line}"
+      palettes_set_for_scanline.each do |palette|
+        f.puts("  dw #{palette.colors_with_default(MAGENTA).take(2).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
+      end
+    end
   end
 end
