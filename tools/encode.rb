@@ -79,9 +79,10 @@ palettes_sets_for_line = image.rows.map do |row|
 end
 
 # 5. Output the 2bpp resulting image
+# FIXME: the transposition is wrong (there's magenta in the rendered image)
 if options[:output_png]
   image_2bpp = ChunkyPNG::Image.new(image.width, image.height)
-  palette_2bpp = Palette.new([0, 86, 172, 255].map(&ChunkyPNG::Color.method(:grayscale)))
+  palette_2bpp = Palette.new([255, 172, 86, 0].map(&ChunkyPNG::Color.method(:grayscale)))
   image.pixels.each.with_coordinates(image.width) do |pixel, x, y|
     column_palette = palettes_sets_for_line[y][x / ChunkyPNG::Image::TILE_WIDTH]
     indexed_pixel = column_palette.transpose(pixel, into: palette_2bpp)
@@ -96,7 +97,7 @@ if options[:output_palettes]
   File.open(options[:output_palettes], "w") do |f|
     # Write the palettes set for line 0
     f.puts("InitialPalettesSet:")
-    initial_palettes_set.map(&:dup).each do |initial_palette|
+    palettes_sets_for_line[0].each do |initial_palette|
       f.puts("  dw #{initial_palette.colors_with_default(MAGENTA).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
     end
     # Write colors pairs to update on each scanline

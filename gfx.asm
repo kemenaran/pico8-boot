@@ -14,9 +14,9 @@ ClearBGMap1:
 ;
 ; The definition data format is:
 ;   dw <source_address>
-;   dw <source_bank>
+;   db <source_bank>
 ;   dw <dest_address>
-;   ds <tiles_count>
+;   db <tiles_count>
 ;
 ; HDMA is used if the LCD screen is enabled (regular loop otherwise)
 CopyTileset:

@@ -10,16 +10,19 @@ INCLUDE "hardware.inc"
 INCLUDE "pico8.inc"
 INCLUDE "constants.asm"
 
+DEF TILEMAP_WIDTH  = 20
+DEF TILEMAP_HEIGHT = 18
+DEF TILEMAP_TOP    = 0
+DEF TILEMAP_LEFT   = 0
+
 DEF PALETTE_SWAP_START_VI EQU 30
-DEF INTERRUPT_LOOP_LAST_SCANLINE EQU 128
+DEF INTERRUPT_LOOP_FIRST_SCANLINE EQU 8
+DEF INTERRUPT_LOOP_LAST_SCANLINE EQU 136
 
 SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
 
 SECTION "LCD Status interrupt", ROM0[$0048]
-  ;jp ScanlineInterruptHardcodedSlide
-  ;jp ScanlineInterruptHardcodedSlideRandom
-  ;jp ScanlineInterruptPopSlide
   jp ScanlineInterruptPopSlideRandom
 
 SECTION "Header", ROM0[$100]
@@ -62,18 +65,25 @@ EntryPoint:
   call ClearBGMap0
   call ClearBGMap1
 
+  ; Load tileset
+  ld hl, Frame4TilesetDef
+  call CopyTileset
+
+  ; Load tilemap
+  ld de, Frame4Tilemap ; source
+  ld hl, _SCRN0        ; destination
+  ld c, TILEMAP_HEIGHT ; rows count
+  call CopyTilemap
+
   ; Load attributes map
-  ld de, Attrmap ; source
-  ld hl, _SCRN0  ; destination
-  ld bc, 18      ; rows count
+  ld de, Frame4Attrmap  ; source
+  ld hl, _SCRN0         ; destination
+  ld bc, ATTRMAP_HEIGHT ; rows count
   call CopyAttrmap
 
   ; Load a grayscale BG palettes set
   ld hl, GrayscalePalettes
   call CopyBGPalettes
-
-  ; Load a single grayscale tile
-  call CopyGrayscaleTile
 
   ; Turn the LCD on
   ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BLK01 | LCDCF_WINOFF | LCDCF_OBJOFF
@@ -120,10 +130,10 @@ VBlankInterrupt:
   jr nz, .done
 
 .enableScanlineInterrupt
-  ; Trigger the scanline interrupt on LYC == 0
+  ; Trigger the scanline interrupt on LYC == INTERRUPT_LOOP_FIRST_SCANLINE
   ld a, STATF_LYC
   ldh [rSTAT], a
-  ld a, 0
+  ld a, INTERRUPT_LOOP_FIRST_SCANLINE - 1
   ldh [rLYC], a
   ; Enable the scanline interrupt
   ld a, IEF_VBLANK | IEF_STAT
@@ -135,247 +145,6 @@ VBlankInterrupt:
 
 .done
   reti
-
-; Scanline interrupt, with hardcoded color values.
-; Faster than a popslide, but takes more space in ROM.
-ScanlineInterruptHardcodedSlide:
-  ; In theory we should save registers and restore them at the end of the interrupt,
-  ; but let's see if we can get away without for now.
-  ;push af
-  ;push hl
-
-  ; Mode 2 - OAM scan (40 GBC cycles)
-  ; ------------------------------------------------------
-
-  ; (ignore this mode 2, as it is for scanline 0, which we don't care about.)
-
-  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
-  ; ------------------------------------------------------
-
-  ; Prepare the color register (4 cycles)
-  ; (assuming hl has been set to rBGPI before the interrupt)
-  ld [hl], BGPIF_AUTOINC | 0  ; 3 cycles
-  inc l ; rBGPD               ; 1 cycles
-
-  ; Macro: copy a color
-MACRO copy_color
-  ld [hl], LOW(\1)  ; 3 cycles
-  ld [hl], HIGH(\1) ; 3 cycles
-ENDM
-
-  ; Wait for HBlank (mode 0)
-  ld hl, rSTAT
-.notHBlank
-  bit STATB_BUSY, [hl]
-  jr nz, .notHBlank
-
-  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
-  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
-  ; Total: 244 GBC cycles
-  ; ------------------------------------------------------
-
-  ; Copy as much palettes as we can
-  ld l, LOW(rBGPD) ; 2 cycles
-  copy_color C_RED
-  copy_color C_ORANGE
-  copy_color C_DARK_BLUE
-  copy_color C_BLACK
-
-  copy_color C_ORANGE
-  copy_color C_YELLOW
-  copy_color C_DARK_PURPLE
-  copy_color C_BLACK
-
-  copy_color C_YELLOW
-  copy_color C_GREEN
-  copy_color C_DARK_GREEN
-  copy_color C_BLACK
-
-  copy_color C_GREEN
-  copy_color C_BLUE
-  copy_color C_BROWN
-  copy_color C_BLACK
-
-  copy_color C_BLUE
-  copy_color C_LAVENDER
-  copy_color C_DARK_GREY
-  copy_color C_BLACK
-
-  copy_color C_LAVENDER
-  copy_color C_PINK
-  copy_color C_LIGHT_GREY
-  copy_color C_BLACK
-
-  ; copy_color C_PINK
-  ; copy_color C_LIGHT_PEACH
-  ; copy_color C_WHITE
-  ; copy_color C_BLACK
-  ;
-  ; copy_color C_LIGHT_PEACH
-  ; copy_color C_RED
-  ; copy_color C_DARK_PURPLE
-  ; copy_color C_BLACK
-
-  ; See comment above
-  ;pop hl
-  ;pop af
-  reti ; 4 cycles
-
-; Scanline interrupt, with hardcoded color values AND random access.
-; Can copy up to 9 color pairs (18 colors) with random access per scanline (Mode 0 + Mode 2)
-ScanlineInterruptHardcodedSlideRandom:
-  ; In theory we should save registers and restore them at the end of the interrupt,
-  ; but let's see if we can get away without for now.
-  ;push af
-  ;push hl
-
-  ; Mode 2 - OAM scan (40 GBC cycles)
-  ; ------------------------------------------------------
-
-  ; (ignore this mode 2, as it is for scanline 0, which we don't care about.)
-
-  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
-  ; ------------------------------------------------------
-
-  ; Prepare the color registers
-  ld de, rBGPI
-  ld hl, rBGPD
-
-  ; Set the initial palettes register index
-  ld a, BGPIF_AUTOINC | 0 ; 2 cycles
-  ld [de], a              ; 2 cycles
-
-  ; Request an exit of `halt` on mode 0
-  ld a, STATF_MODE00
-  ldh [rSTAT], a
-  ld a, IEF_STAT
-  ldh [rIE], a
-  ; (We're in an interrupt handler, so interrupts are already disabled)
-  ; di
-
-  ; Wait for HBlank (STAT mode 0)
-  halt
-  ; no need for a nop, as we're pretty sure no enabled interrupt was serviced during the halt
-
-  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
-  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
-  ; Total: 244 GBC cycles
-  ; ------------------------------------------------------
-
-  ; Copy the first pair of colors, using the pre-configured register index
-  ld [hl], LOW(C_RED)
-  ld [hl], HIGH(C_RED)
-  ld [hl], LOW(C_ORANGE)
-  ld [hl], HIGH(C_ORANGE)
-
-  ; Macro: copy a pair of 2 colors to a specific location
-MACRO copy_color_pair_to ; index, color1, color2
-  ld a, BGPIF_AUTOINC | \1 ; 2 cycles
-  ld [de], a               ; 2 cycles
-
-  ld [hl], LOW(\2)         ; 3 cycles
-  ld [hl], HIGH(\2)        ; 3 cycles
-  ld [hl], LOW(\3)         ; 3 cycles
-  ld [hl], HIGH(\3)        ; 3 cycles
-ENDM
-
-  ; Copy the rest of the colors (with random access)
-  ;copy_color_pair_to 0, C_RED, C_ORANGE
-  ;copy_color_pair_to 4, C_DARK_BLUE, C_BLACK
-
-  copy_color_pair_to 8, C_ORANGE, C_YELLOW
-  ;copy_color_pair_to 12, C_DARK_PURPLE, C_BLACK
-
-  copy_color_pair_to 16, C_YELLOW, C_GREEN
-  ;copy_color_pair_to 20, C_DARK_GREEN, C_BLACK
-
-  copy_color_pair_to 24, C_GREEN, C_BLUE
-  ;copy_color_pair_to 28, C_BROWN, C_BLACK
-
-  copy_color_pair_to 32, C_BLUE, C_LAVENDER
-  ;copy_color_pair_to 36, C_DARK_GREY, C_BLACK
-
-  copy_color_pair_to 40, C_LAVENDER, C_PINK
-  ;copy_color_pair_to 44, C_LIGHT_GREY, C_BLACK
-
-  copy_color_pair_to 48, C_PINK, C_LIGHT_PEACH
-  ;copy_color_pair_to 52, C_WHITE, C_BLACK
-
-  copy_color_pair_to 56, C_LIGHT_PEACH, C_RED
-  ;copy_color_pair_to 60, C_DARK_PURPLE, C_BLACK
-
-  ; Manually mark the STAT Mode 0 interrupt as serviced
-  ; (as IME was disabled, it wasn't done automatically by the CPU)
-  ld hl, rIF         ;
-  res IEB_STAT, [hl] ; 4 cycles
-
-  ; Restore interrupts (5 cycles)
-  ld a, IEF_VBLANK      ; 2 cycles
-  ldh [rIE], a          ; 3 cycles
-
-  ;See comment above
-  ;pop hl
-  ;pop af
-  reti ; 4 cycles
-
-; Popslide version of the scanline interrupt
-; Slower than a hardcoded slide, but takes less space in ROM.
-ScanlineInterruptPopSlide:
-  ; Mode 2 - OAM scan (40 GBC cycles)
-  ; ------------------------------------------------------
-
-  ; (ignore this mode 2, as it is for scanline 0, which we don't care about.)
-
-  ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
-  ; ------------------------------------------------------
-
-  ; Save the stack pointer
-  ld [hStackPointer], sp ; 5 cycles
-
-  ; Move the stack pointer to the beginning of the palettes set
-  ld sp, Pico8Palettes ; 3 cycles
-
-  ; Prepare the color register (4 cycles)
-  ; (assuming hl has been set to rBGPI before the interrupt)
-  ld [hl], BGPIF_AUTOINC | 0 ; 3 cycles
-  inc l ; rBGPD   ; 1 cycles
-
-  ; Pre-pop two colors
-  pop bc
-  pop de
-
-  ; Wait for HBlank (mode 0)
-  ld hl, rSTAT
-.notHBlank
-  bit STATB_BUSY, [hl]
-  jr nz, .notHBlank
-
-  ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
-  ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
-  ; Total: 244 GBC cycles
-  ; ------------------------------------------------------
-
-  ld l, LOW(rBGPD) ; 2 cycles
-
-  ; Copy the two colors we stored in registers during Mode 3 (8 cycles)
-  ld [hl], c  ; 2 cycles
-  ld [hl], b  ; 2 cycles
-  ld [hl], e  ; 2 cycles
-  ld [hl], d  ; 2 cycles
-
-  ; Now copy as much colors as we can
-REPT 20
-  ; Copy a color (7 cycles)
-  pop de      ; 3 cycles
-  ld [hl], e  ; 2 cycles
-  ld [hl], d  ; 2 cycles
-ENDR
-
-  ; Restore the stack pointer and return before the start of mode 3 (12 cycles)
-  ld sp, hStackPointer  ; 3 cycles
-  pop hl                ; 3 cycles
-  ld sp, hl             ; 2 cycles
-  reti                  ; 4 cycles
 
 ; Popslide version of the scanline interrupt, with random palette access.
 ; Can copy up to 8 color pairs (16 colors) with random access per scanline (Mode 0 + Mode 2)
@@ -467,7 +236,7 @@ ENDM
 
   ; Repeat for all scanlines
   ldh a, [rLY]
-  cp INTERRUPT_LOOP_LAST_SCANLINE
+  cp INTERRUPT_LOOP_LAST_SCANLINE - 1
   jp nz, .scanlineLoop
 
   ; We reached the end of scanlines, and entered the VBlank period.
@@ -484,29 +253,42 @@ ENDM
   ; Return (4 cycles)
   reti                  ; 4 cycles
 
-CopyGrayscaleTile:
-  ld hl, GrayscaleTile
-  ld de, _VRAM + $0FF0
-  ld bc, GrayscaleTile.end - GrayscaleTile
-  jp CopyData
-
 INCLUDE "memory.asm"
 INCLUDE "gfx.asm"
-INCLUDE "gfx/4.palettes.asm"
 
 ; -------------------------------------------------------------------------------
-SECTION "Tilesets - frame 1-4", ROMX, BANK[$01]
+SECTION "Graphics", ROMX, BANK[$01]
 
-ALIGN 4 ; Align to 16-bytes boundaries, for HDMA transfer
-GrayscaleTile:
-INCBIN "gfx/grayscale.2bpp"
+Frame4Tileset:
+INCBIN "gfx/4.indexed.tileset.2bpp"
   .end
 
-Attrmap:
-REPT 18
-  db $00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03
+Frame4TilesetDef:
+  dw Frame4Tileset ; source address
+  db BANK(Frame4Tileset) ; source bank
+  dw _VRAM ; dest address
+  db ((Frame4Tileset.end - Frame4Tileset) / 16) ; tiles_count
+
+Frame4Tilemap:
+INCBIN "gfx/4.indexed.tilemap"
+  .end
+
+ALIGN 4
+Frame4Attrmap:
+; First row
+REPT 20
+  db $00
 ENDR
-  .end
+; Colored rows
+REPT 16
+  db $00, $00, $00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07, $00, $00
+ENDR
+; Last row
+REPT 20
+  db $00
+ENDR
+
+INCLUDE "gfx/4.indexed.palettes.asm"
 
 ; -------------------------------------------------------------------------------
 SECTION "WRAM Stack", WRAM0[$CE00]
