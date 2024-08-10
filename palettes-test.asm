@@ -16,7 +16,7 @@ DEF TILEMAP_TOP    = 0
 DEF TILEMAP_LEFT   = 0
 
 DEF PALETTE_SWAP_START_VI EQU 30
-DEF INTERRUPT_LOOP_FIRST_SCANLINE EQU 9
+DEF INTERRUPT_LOOP_FIRST_SCANLINE EQU 7
 DEF INTERRUPT_LOOP_LAST_SCANLINE EQU 136
 
 SECTION "Interrupt VBlank", ROM0[$0040]
@@ -133,7 +133,7 @@ VBlankInterrupt:
   ; Trigger the scanline interrupt on LYC == INTERRUPT_LOOP_FIRST_SCANLINE
   ld a, STATF_LYC
   ldh [rSTAT], a
-  ld a, INTERRUPT_LOOP_FIRST_SCANLINE - 1
+  ld a, INTERRUPT_LOOP_FIRST_SCANLINE
   ldh [rLYC], a
   ; Enable the scanline interrupt
   ld a, IEF_VBLANK | IEF_STAT
@@ -157,7 +157,7 @@ ScanlineInterruptPopSlideRandom:
   ld [hStackPointer], sp ; 5 cycles
 
   ; Move the stack pointer to the beginning of the palettes set diffs
-  ld sp, PalettesDiffForScanline._1 ; 3 cycles
+  ld sp, PalettesDiffForScanline._0 ; 3 cycles
 
   ; Request an exit of `halt` on mode 0 (HBlank)
   ld a, STATF_MODE00
