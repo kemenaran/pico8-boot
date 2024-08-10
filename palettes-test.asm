@@ -190,26 +190,25 @@ ScanlineInterruptPopSlideRandom:
   ; Mode 0 - HBlank, VRAM accessible (204 GBC cycles without SCX/SCX and objects)
   ; ------------------------------------------------------
 
-  ; Set the X scroll register
-  ldh [rSCX], a ; 3 cycles
-
   ; Copy the two colors we stored in registers during Mode 3 (8 cycles)
   ld [hl], c  ; 2 cycles
   ld [hl], b  ; 2 cycles
   ld [hl], e  ; 2 cycles
   ld [hl], d  ; 2 cycles
 
-  ; Macro: copy the next pair of 2 colors to a specific location
+  ; Macro: copy the next pair of 2 colors to a specific location (19 cycles)
 MACRO copy_next_color_pair_to ; index
+  ; Update rBGPI to point to the correct color index
   dec l                       ; 1 cycle
   ld [hl], BGPIF_AUTOINC | \1 ; 3 cycles
   inc l                       ; 1 cycle
-  pop de
-  ld [hl], e        ; 3 cycles
-  ld [hl], d        ; 3 cycles
-  pop de
-  ld [hl], e        ; 3 cycles
-  ld [hl], d        ; 3 cycles
+  ; Copy two consecutive colors
+  pop de            ; 3 cycles
+  ld [hl], e        ; 2 cycles
+  ld [hl], d        ; 2 cycles
+  pop de            ; 3 cycles
+  ld [hl], e        ; 2 cycles
+  ld [hl], d        ; 2 cycles
 ENDM
 
   ; Now copy as much colors as we can
@@ -225,6 +224,10 @@ ENDM
 
   copy_next_color_pair_to 48
   copy_next_color_pair_to 56
+
+  ; Set the X scroll register (3 cycles)
+  ; (This may execute one cycle after VRAM is locked - but even though we still can change rSCX)
+  ldh [rSCX], a ; 3 cycles
 
   ; Mode 3 - Drawing pixels, VRAM locked (86 cycles without SCX/SCX and objects)
   ; ------------------------------------------------------
