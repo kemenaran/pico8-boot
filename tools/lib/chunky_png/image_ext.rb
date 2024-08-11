@@ -6,11 +6,14 @@ class ChunkyPNG::Image
   # Return an enumerator that yields each row as an array of pixels.
   # @return [Enumerator]
   def rows
-    if block_given?
-      (0...height).each { |i| yield row(i) }
-    else
-      to_enum(:rows)
-    end
+    pixels.each_slice(width)
+  end
+
+  # Rotate the pixels of a single row by `count` pixels.
+  # @param [Integer] x row index
+  # @param [Integer] count shit amount
+  def rotate_row!(x, count)
+    replace_row!(x, row(x).rotate(count))
   end
 
   TILE_WIDTH = 8
