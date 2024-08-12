@@ -10,10 +10,13 @@ INCLUDE "hardware.inc"
 INCLUDE "pico8.inc"
 INCLUDE "constants.asm"
 
-DEF TILEMAP_WIDTH  = 20
-DEF TILEMAP_HEIGHT = 18
-DEF TILEMAP_TOP    = 0
+DEF TILEMAP_WIDTH  = 32
+DEF TILEMAP_HEIGHT = 16
+DEF TILEMAP_TOP    = 1
 DEF TILEMAP_LEFT   = 0
+
+DEF ATTRMAP_WIDTH  = 32
+DEF ATTRMAP_HEIGHT = 18
 
 DEF PALETTE_SWAP_START_VI EQU 30
 DEF INTERRUPT_LOOP_FIRST_SCANLINE EQU 7
@@ -69,9 +72,15 @@ EntryPoint:
   ld hl, Frame4TilesetDef
   call CopyTileset
 
+  ; Load a single black tile as tile n° $FF
+  ld hl, BlackTile
+  ld de, _VRAM + $1000 - 16 ; last tile of tiles data memory
+  ld bc, 16
+  call CopyData
+
   ; Load tilemap
   ld de, Frame4Tilemap ; source
-  ld hl, _SCRN0        ; destination
+  ld hl, _SCRN0 + TILEMAP_TOP * 32 + TILEMAP_LEFT ; destination
   ld c, TILEMAP_HEIGHT ; rows count
   call CopyTilemap
 
@@ -186,6 +195,7 @@ ScanlineInterruptPopSlideRandom:
   ; TODO: implement the actual pico8 animation shift (0-1-2-1-0-1-2-1-0)
   ldh a, [rLY]
   sub INTERRUPT_LOOP_FIRST_SCANLINE
+  sub 8 * 2 ; width of two tiles
 
   ; Wait for HBlank (STAT mode 0)
   halt
@@ -266,6 +276,10 @@ INCLUDE "gfx.asm"
 ; -------------------------------------------------------------------------------
 SECTION "Graphics", ROMX, BANK[$01]
 
+BlackTile:
+  ds 16, $FF
+  .end
+
 Frame4Tileset:
 INCBIN "gfx/4.indexed.tileset.2bpp"
   .end
@@ -283,17 +297,13 @@ INCBIN "gfx/4.indexed.tilemap"
 ALIGN 4
 Frame4Attrmap:
 ; First row
-REPT 20
-  db $00
-ENDR
+ds ATTRMAP_WIDTH, $00
 ; Colored rows
 REPT 16
-  db $00, $00, $00, $01, $02, $03, $04, $05, $06, $07, $00, $01, $02, $03, $04, $05, $06, $07, $00, $00
+ds ATTRMAP_WIDTH, $00, $01, $02, $03, $04, $05, $06, $07
 ENDR
 ; Last row
-REPT 20
-  db $00
-ENDR
+ds ATTRMAP_WIDTH, $00
 
 INCLUDE "gfx/4.indexed.palettes.asm"
 
