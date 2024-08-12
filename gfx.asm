@@ -55,7 +55,7 @@ CopyTileset:
   ld c, a
   ld a, [hli]
   ld b, a
-  push bc ; push on stack; we'll pop it back to hl befre copying
+  push bc ; push on stack; we'll pop it back to hl before copying
   ; source bank
   ld a, [hli]
   ld [rROMB0], a
