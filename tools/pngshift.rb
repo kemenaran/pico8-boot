@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
 #
-# Shift each row of a PNG image by a sequence of wavy pixels every line
+# Shift the rows of a PNG image by 4 pixels every 4 rows
 #
 # Usage:
 #   tools/pngshift.rb <original_filename.png> <output_filename.png>
@@ -10,11 +10,27 @@ require_relative "lib/chunky_png"
 filename = ARGV.first
 image = ChunkyPNG::Image.from_file(filename)
 
-OFFSET_SEQUENCE = [0, 1, 2, 1]
-
-# Shift the pixels of each row one more pixel (plus offset) on the right
+# Shift the rows by 4 pixels every 4 rows
 (0...image.height).each do |x|
-  additionnal_offset = OFFSET_SEQUENCE[x % 4]
-  image.rotate_row!(x, -x + additionnal_offset - 1)
+  count = (x / 4) * 4 + 1
+  image.rotate_row!(x, - count)
 end
 image.save(ARGV[1], color_mode: ChunkyPNG::COLOR_INDEXED)
+
+# Result:
+# -1
+# -1
+# -1
+# -1
+# -5
+# -5
+# -5
+# -5
+# -9
+# -9
+# -9
+# -9
+# -13
+# -13
+# -13
+# -13
