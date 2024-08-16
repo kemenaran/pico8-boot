@@ -45,9 +45,9 @@ end
 mask_color = options[:mask_color]
 image.rows.with_index.map do |row, y|
   left_mask_length = (y / 4) * 4
-  right_mask_length = image.height - 1 - y
-  remaining_length = row.length - left_mask_length - right_mask_length
-  masked_row = ([mask_color] * left_mask_length) + row.slice(left_mask_length, remaining_length) + ([mask_color] * right_mask_length)
+  unmasked_length = image.height
+  right_mask_length = row.length - (left_mask_length + unmasked_length)
+  masked_row = ([mask_color] * left_mask_length) + row.slice(left_mask_length, unmasked_length) + ([mask_color] * right_mask_length)
   image.replace_row!(y, masked_row)
 end
 

@@ -194,7 +194,7 @@ ScanlineInterruptPopSlideRandom:
   ldh a, [rLY]
   sub INTERRUPT_LOOP_FIRST_SCANLINE
   and a, %11111100 ; clear the two lowest bits
-  ;sub 8 * 2 ; width of two tiles
+  sub 8 * 2 ; width of two tiles
 
   ; Wait for HBlank (STAT mode 0)
   halt
