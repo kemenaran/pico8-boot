@@ -280,7 +280,7 @@ BlackTile:
   .end
 
 Frame4Tileset:
-INCBIN "gfx/4.indexed.tileset.2bpp"
+INCBIN "gfx/4.tileset.2bpp"
   .end
 
 Frame4TilesetDef:
@@ -290,7 +290,7 @@ Frame4TilesetDef:
   db ((Frame4Tileset.end - Frame4Tileset) / 16) ; tiles_count
 
 Frame4Tilemap:
-INCBIN "gfx/4.indexed.tilemap"
+INCBIN "gfx/4.tilemap"
   .end
 
 ALIGN 4
@@ -304,7 +304,7 @@ ENDR
 ; Last row
 ds ATTRMAP_WIDTH, $00
 
-INCLUDE "gfx/4.indexed.palettes.asm"
+INCLUDE "gfx/4.palettes.asm"
 
 ; -------------------------------------------------------------------------------
 SECTION "WRAM Stack", WRAM0[$CE00]
