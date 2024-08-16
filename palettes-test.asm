@@ -190,12 +190,11 @@ ScanlineInterruptPopSlideRandom:
   pop de
 
   ; Prepare the scroll register
-  ; (We shift the image horizontally 1px on every scanline)
-  ;
-  ; TODO: implement the actual pico8 animation shift (0-1-2-1-0-1-2-1-0)
+  ; (Shift the image horizontally 4px more every 4th line)
   ldh a, [rLY]
   sub INTERRUPT_LOOP_FIRST_SCANLINE
-  sub 8 * 2 ; width of two tiles
+  and a, %11111100 ; clear the two lowest bits
+  ;sub 8 * 2 ; width of two tiles
 
   ; Wait for HBlank (STAT mode 0)
   halt

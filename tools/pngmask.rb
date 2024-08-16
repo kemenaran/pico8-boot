@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 #
 # Mask an image with a triangular fill color on the lower-left side and upper-right side.
-# The fill color increases by ~1px every line (plus a pattern offset).
+# The fill color increases by 4px every 4 rows.
 #
 # |------------|          |------------|
 # |            |          |#       ####|
@@ -44,7 +44,7 @@ end
 # 3. Mask the image
 mask_color = options[:mask_color]
 image.rows.with_index.map do |row, y|
-  left_mask_length = y
+  left_mask_length = (y / 4) * 4
   right_mask_length = image.height - 1 - y
   remaining_length = row.length - left_mask_length - right_mask_length
   masked_row = ([mask_color] * left_mask_length) + row.slice(left_mask_length, remaining_length) + ([mask_color] * right_mask_length)

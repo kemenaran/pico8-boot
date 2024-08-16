@@ -92,6 +92,8 @@ TODO
 - Color-correct the pico8 colors
 - ✅ Write a script to output color statistics about an image: color count per picture/per tile/per 8x2 bloc
 - ✅ Write a script to rotate the image by 1px every line, and see if the stats are better
-- Code a demo to see how many colors can be updated every scanline
-- Write a script to output a new image with reduced colors and/or tiles that can be displayed by the GBA
-
+- ✅ Code a demo to see how many colors can be updated every scanline
+- ✅ Write a script to output a new image with reduced colors and/or tiles that can be displayed by the GBC
+- Implement the wavy pattern of shifting
+- Write an easy-to-use toolchain to convert images
+- Implement back from demo to main
