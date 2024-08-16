@@ -7,14 +7,14 @@
 
 require_relative "lib/chunky_png"
 
-# Shift the pixels of each row one more pixel on the right
 filename = ARGV.first
 image = ChunkyPNG::Image.from_file(filename)
 
-OFFSET_SEQUENCE = [0, 1, 2, 1, 0, 1, 2, 1]
+OFFSET_SEQUENCE = [0, 1, 2, 1]
 
+# Shift the pixels of each row one more pixel (plus offset) on the right
 (0...image.height).each do |x|
-  additionnal_offset = OFFSET_SEQUENCE[x % 8]
-  image.rotate_row!(x, -(x - additionnal_offset) - 1)
+  additionnal_offset = OFFSET_SEQUENCE[x % 4]
+  image.rotate_row!(x, -x + additionnal_offset - 1)
 end
 image.save(ARGV[1], color_mode: ChunkyPNG::COLOR_INDEXED)
