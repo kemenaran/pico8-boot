@@ -76,8 +76,7 @@ TODO
 - ✅ Display the first frame in DMG mode
 - ✅ Implement double-buffering
 - ✅ Switch to DMG-on-GBC (but with double speed)
-- ✅ Why aren't the second frame tiles written to VRAM bank 1?
- (Because we're not in CGB compatible mode!)
+- ✅ Why aren't the second frame tiles written to VRAM bank 1? (Because we're not in CGB compatible mode!)
 - ✅ Convert the ROM to GBC
 - ✅ Split loading into several stages (it seems 224 tiles can be loaded per vblank max)
 - ✅ DMA tiles and tilemap
@@ -94,6 +93,8 @@ TODO
 - ✅ Write a script to rotate the image by 1px every line, and see if the stats are better
 - ✅ Code a demo to see how many colors can be updated every scanline
 - ✅ Write a script to output a new image with reduced colors and/or tiles that can be displayed by the GBC
-- Implement the wavy pattern of shifting
-- Write an easy-to-use toolchain to convert images
+- ✅ Implement the pico8 pattern of shifting
+- ✅ Write an easy-to-use toolchain to convert images
+- ✅ Fix bug where the colors start to be off after one frame
+- Investigate why colors start to be off after a certain scanline
 - Implement back from demo to main

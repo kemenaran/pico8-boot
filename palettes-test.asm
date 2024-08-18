@@ -121,10 +121,6 @@ MainLoop:
   cp 144
   jr c, .ensureVBlank
 
-  ; Prepare registers for the LCDStat interrupt
-  ld hl, rBGPI
-
-  ; Loop
   jp MainLoop
 
 ; Executed by the VBlank interrupt handler
@@ -262,9 +258,11 @@ ENDM
   pop hl                ; 3 cycles
   ld sp, hl             ; 2 cycles
 
-  ; Restore interrupts (5 cycles)
+  ; Restore interrupts (10 cycles)
+  ld a, STATF_LYC             ; 2 cycles
+  ldh [rSTAT], a              ; 3 cycles
   ld a, IEF_VBLANK | IEF_STAT ; 2 cycles
-  ldh [rIE], a          ; 3 cycles
+  ldh [rIE], a                ; 3 cycles
 
   ; Return (4 cycles)
   reti                  ; 4 cycles
