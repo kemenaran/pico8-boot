@@ -44,7 +44,7 @@ end
 # 3. Mask the image
 mask_color = options[:mask_color]
 image.rows.with_index.map do |row, y|
-  left_mask_length = (y / 4) * 4
+  left_mask_length = (y / 4) * 4 + 1
   unmasked_length = image.height
   right_mask_length = row.length - (left_mask_length + unmasked_length)
   masked_row = ([mask_color] * left_mask_length) + row.slice(left_mask_length, unmasked_length) + ([mask_color] * right_mask_length)
