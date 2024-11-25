@@ -26,7 +26,8 @@ class Palette
   def <<(new_color)
     return self if @colors.include?(new_color)
     first_free_slot = @colors.index(nil)
-    raise "Palette is already full" if first_free_slot.nil?
+    #debugger if first_free_slot.nil?
+    raise "Attempted to add #{ChunkyPNG::Color.to_hex(new_color, false)} to a full palette (#{self.inspect})" if first_free_slot.nil?
     @colors[first_free_slot] = new_color
     self
   end
@@ -47,10 +48,13 @@ class Palette
 
   # Operations
 
+  class MissingColorError < StandardError
+  end
+
   def transpose(color, into:)
     other_palette = into
     index_in_palette = @colors.index(color)
-    raise "Color \"#{ChunkyPNG::Color.to_hex(color, false)}\" not found in #{inspect}" if index_in_palette.nil?
+    raise MissingColorError, "Color \"#{ChunkyPNG::Color.to_hex(color, false)}\" not found in #{inspect}" if index_in_palette.nil?
     other_palette.colors[index_in_palette]
   end
 

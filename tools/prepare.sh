@@ -18,7 +18,7 @@ tools/pngshift.rb "original-gfx/${NAME}.png" "original-gfx/shifted/${NAME}.png"
 tools/encode.rb "original-gfx/shifted/${NAME}.png" --output-palettes "gfx/${NAME}.palettes.asm" --output-png "gfx/${NAME}.png"
 
 # Add a black mask on the left and right of the image, to display a border around the picture
-tools/pngmask.rb --repeat 4 "gfx/${NAME}.png" "gfx/${NAME}.masked.png"
+tools/pngmask.rb --repeat 2 "gfx/${NAME}.png" "gfx/${NAME}.masked.png"
 
 # Generate a 2bpp tileset and tilemap from the masked image
 rgbgfx "gfx/${NAME}.masked.png" --unique-tiles --tilemap "gfx/4.tilemap" --output "gfx/${NAME}.tileset.2bpp"

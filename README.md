@@ -96,5 +96,9 @@ TODO
 - ✅ Implement the pico8 pattern of shifting
 - ✅ Write an easy-to-use toolchain to convert images
 - ✅ Fix bug where the colors start to be off after one frame
-- Investigate why colors start to be off after a certain scanline
-- Implement back from demo to main
+- ✅ Investigate why colors start to be off after a certain scanline:
+  It's because as we shift x position prgressively, we start rendering more of the mirrored tileset (instead of the original). And the duplicated tileset uses whatever color is in the palette (which may even be magenta).
+- Can we fix the encoder to encode colors for all 16 columns (instead of 8 mirrored)?
+- Or can we fill the palette with random colors (instead of magenta)?
+- Implement a single frame back from demo to main
+- Implement all frames

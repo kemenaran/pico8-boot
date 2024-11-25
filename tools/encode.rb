@@ -31,12 +31,7 @@ logger.debug({options:, ARGV:})
 filename = ARGV.first
 image = ChunkyPNG::Image.from_file(filename)
 
-# 2. Crop it to the first 8 columns
-# (the source image is assumed to be repeating after than)
-COLUMNS_COUNT = 8
-image.crop!(0, 0, COLUMNS_COUNT * ChunkyPNG::Image::TILE_WIDTH, image.height)
-
-# 3. Build the fixed part of the palettes.
+# 2. Build the fixed part of the palettes.
 #
 # Each palette of 4 colors is split in two parts:
 # - 2 colors can be changed on every scanline,
@@ -44,7 +39,8 @@ image.crop!(0, 0, COLUMNS_COUNT * ChunkyPNG::Image::TILE_WIDTH, image.height)
 #
 # Build the fixed part of each palette, by computing the most frequent colors of each column.
 initial_palettes_set = []
-# For each column (we only take the first 8, as the picture will be mirrored)
+# For each column (we only take the first 8, as the main colors repeats afterwards)
+COLUMNS_COUNT = 8
 COLUMNS_COUNT.times do |i|
   # Compute the two most frequent colors in this column
   most_frequent_colors = image
@@ -64,28 +60,35 @@ COLUMNS_COUNT.times do |i|
 end
 initial_palettes_set.freeze
 
-# 4. Complete the palettes set for each scanline with the variable colors
-palettes_sets_for_line = image.rows.map do |row|
+# 3. Complete the palettes of each scanline with the variable colors
+palettes_sets_for_line = image.rows.map.with_index do |row, row_index|
   # Initialize this line's palettes set with the fixed colors
   line_palettes_set = initial_palettes_set.map(&:dup)
-  # For each 8 pixels span of the line…
-  row.each_slice(8).with_index do |tile_row_pixels, column|
+  # For each sliver of the line…
+  row.each_slice(8).with_index do |sliver, column|
     # Add the required colors to render this span to the palette.
     # (This will raise if the span require more than 4 colors)
-    column_palette = line_palettes_set[column]
-    tile_row_pixels.each { |pixel_color| column_palette << pixel_color }
+    column_palette = line_palettes_set[column % COLUMNS_COUNT]
+    sliver.each { |pixel_color| column_palette << pixel_color rescue nil }
   end
   line_palettes_set
 end
 
 # 5. Output the 2bpp resulting image
-# FIXME: the transposition is wrong (there's magenta in the rendered image)
+Random.new(0) # for deterministic Array#sample
+
 if options[:output_png]
   image_2bpp = ChunkyPNG::Image.new(image.width, image.height)
   palette_2bpp = Palette.new([255, 172, 86, 0].map(&ChunkyPNG::Color.method(:grayscale)))
   image.pixels.each.with_coordinates(image.width) do |pixel, x, y|
-    column_palette = palettes_sets_for_line[y][x / ChunkyPNG::Image::TILE_WIDTH]
-    indexed_pixel = column_palette.transpose(pixel, into: palette_2bpp)
+    column = x / ChunkyPNG::Image::TILE_WIDTH
+    column_palette = palettes_sets_for_line[y][column % COLUMNS_COUNT]
+    indexed_pixel = begin
+      column_palette.transpose(pixel, into: palette_2bpp)
+    rescue Palette::MissingColorError
+      fallback_color = column_palette.variable_colors[column % 2] # pick the first or second variable color, but the same for all pixels of a column
+      column_palette.transpose(fallback_color, into: palette_2bpp)
+    end
     image_2bpp.set_pixel(x, y, indexed_pixel)
   end
   image_2bpp.save(options[:output_png], bit_depth: 2)
@@ -93,7 +96,7 @@ end
 
 # 6. Output the palettes for each line to an assembly text file
 if options[:output_palettes]
-  MAGENTA = ChunkyPNG::Color.from_hex("#CB006A")
+  MAGENTA = ChunkyPNG::Color.from_hex("#FF40FF")
   File.open(options[:output_palettes], "w") do |f|
     # Write the palettes set for line 0
     f.puts("InitialPalettesSet:")
