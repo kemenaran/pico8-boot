@@ -1,6 +1,6 @@
 begin
   require "chunky_png"
-rescue
+rescue LoadError => e
   # Download and install dependencies
   require "bundler/inline"
   gemfile do
