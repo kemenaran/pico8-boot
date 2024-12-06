@@ -98,7 +98,14 @@ TODO
 - ✅ Fix bug where the colors start to be off after one frame
 - ✅ Investigate why colors start to be off after a certain scanline:
   It's because as we shift x position prgressively, we start rendering more of the mirrored tileset (instead of the original). And the duplicated tileset uses whatever color is in the palette (which may even be magenta).
-- Can we fix the encoder to encode colors for all 16 columns (instead of 8 mirrored)?
+- ✅ Can we fix the encoder to encode colors for all 16 columns (instead of 8 mirrored)?
+  - Yes, with a best effort (if the palette is already full, we pick a random existing color)
+- ✅ Why are some colors incorrect?
+  - Because sometimes a cycle is missing to copy the last color byte of BG7
+  - Possible solutions:
+    1. Find an extra cycle of optimization
+    2. Copy colors in 4-colors chunks (instead of 2) [It makes debugging colors harder though]
+    3. Hardcode the colors slide
 - Or can we fill the palette with random colors (instead of magenta)?
 - Implement a single frame back from demo to main
 - Implement all frames
