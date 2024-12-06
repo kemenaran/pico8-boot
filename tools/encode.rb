@@ -17,12 +17,13 @@ require_relative "lib/enumerator/with_coordinates"
 logger = Logger.new(STDERR)
 logger.level = Logger::UNKNOWN
 
-options = {}
+options = { palette_fixed_colors_alternated: false }
 OptionParser.new do |opts|
   opts.banner = "Usage: tools/encode.rb [--verbose] input_image.png"
-  opts.on('-v', '--verbose') { |o| logger.level = Logger::DEBUG }
-  opts.on('-p FILENAME', '--output-palettes FILENAME') { |filename| options[:output_palettes] = filename }
-  opts.on('-b FILENAME', '--output-png FILENAME') { |filename| options[:output_png] = filename }
+  opts.on("-v", "--verbose") { |o| logger.level = Logger::DEBUG }
+  opts.on("-a", "--palette-fixed-colors-alternated", "Put the palette's fixed colors last (instead of first) every other column.") { |o| options[:palette_fixed_colors_alternated] = true }
+  opts.on("-p FILENAME", "--output-palettes FILENAME") { |filename| options[:output_palettes] = filename }
+  opts.on("-b FILENAME", "--output-png FILENAME") { |filename| options[:output_png] = filename }
 end.parse!
 
 logger.debug({options:, ARGV:})
@@ -54,6 +55,7 @@ COLUMNS_COUNT.times do |i|
     .take(2) # 2 most frequent colors
     .reverse # actual color first, black last
   initial_palettes_set[i] = Palette.new
+    .tap { |palette| palette.fixed_colors_start = options[:palette_fixed_colors_alternated] ? (i % 2) * 2 : 0 } # Alternate between having the fixed colors pair at the beginning or at the end
     .tap { |palette| palette.fixed_colors = [most_frequent_colors[0], most_frequent_colors[1]] }
     .freeze
   logger.debug "Initial palette for column #{i}: #{initial_palettes_set[i].inspect}"
@@ -75,19 +77,19 @@ palettes_sets_for_line = image.rows.map.with_index do |row, row_index|
 end
 
 # 5. Output the 2bpp resulting image
-Random.new(0) # for deterministic Array#sample
-
 if options[:output_png]
+  PALETTE_2BPP = Palette.new([255, 172, 86, 0].map(&ChunkyPNG::Color.method(:grayscale)))
   image_2bpp = ChunkyPNG::Image.new(image.width, image.height)
-  palette_2bpp = Palette.new([255, 172, 86, 0].map(&ChunkyPNG::Color.method(:grayscale)))
+  Random.new(0) # for deterministic Array#sample
+
   image.pixels.each.with_coordinates(image.width) do |pixel, x, y|
     column = x / ChunkyPNG::Image::TILE_WIDTH
     column_palette = palettes_sets_for_line[y][column % COLUMNS_COUNT]
     indexed_pixel = begin
-      column_palette.transpose(pixel, into: palette_2bpp)
+      column_palette.transpose(pixel, into: PALETTE_2BPP)
     rescue Palette::MissingColorError
       fallback_color = column_palette.variable_colors[column % 2] # pick the first or second variable color, but the same for all pixels of a column
-      column_palette.transpose(fallback_color, into: palette_2bpp)
+      column_palette.transpose(fallback_color, into: PALETTE_2BPP)
     end
     image_2bpp.set_pixel(x, y, indexed_pixel)
   end
@@ -101,7 +103,7 @@ if options[:output_palettes]
     # Write the palettes set for line 0
     f.puts("InitialPalettesSet:")
     palettes_sets_for_line[0].each do |initial_palette|
-      f.puts("  dw #{initial_palette.colors_with_default(MAGENTA).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
+      f.puts("  dw #{initial_palette.dup(default_color: MAGENTA).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
     end
     # Write colors pairs to update on each scanline
     f.puts("")
@@ -109,7 +111,7 @@ if options[:output_palettes]
     palettes_sets_for_line.each.with_index do |palettes_set_for_scanline, line|
       f.puts "._#{line}"
       palettes_set_for_scanline.each do |palette|
-        f.puts("  dw #{palette.colors_with_default(MAGENTA).take(2).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
+        f.puts("  dw #{palette.dup(default_color: MAGENTA).variable_colors.map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
       end
     end
   end

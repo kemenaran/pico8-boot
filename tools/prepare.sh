@@ -15,10 +15,10 @@ NAME="$1" # image name
 tools/pngshift.rb "original-gfx/${NAME}.png" "original-gfx/shifted/${NAME}.png"
 
 # Generate the indexed PNG and palettes scanline diffs
-tools/encode.rb "original-gfx/shifted/${NAME}.png" --output-palettes "gfx/${NAME}.palettes.asm" --output-png "gfx/${NAME}.png"
+tools/encode.rb "original-gfx/shifted/${NAME}.png" --palette-fixed-colors-alternated --output-palettes "gfx/${NAME}.palettes.asm" --output-png "gfx/${NAME}.png"
 
 # Add a black mask on the left and right of the image, to display a border around the picture
-tools/pngmask.rb --repeat 2 "gfx/${NAME}.png" "gfx/${NAME}.masked.png"
+tools/pngmask.rb --palette-fixed-colors-alternated --repeat 2 "gfx/${NAME}.png" "gfx/${NAME}.masked.png"
 
 # Generate a 2bpp tileset and tilemap from the masked image
 rgbgfx "gfx/${NAME}.masked.png" --unique-tiles --tilemap "gfx/4.tilemap" --output "gfx/${NAME}.tileset.2bpp"

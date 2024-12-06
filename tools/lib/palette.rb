@@ -10,10 +10,6 @@ class Palette
     @colors
   end
 
-  def colors_with_default(default_color)
-    @colors.map { |c| c.nil? ? default_color : c }
-  end
-
   def colors=(new_colors)
     raise "Palette must be initialized with exactly 4 values" if new_colors.length != 4
     @colors = Array.new(new_colors)
@@ -26,7 +22,6 @@ class Palette
   def <<(new_color)
     return self if @colors.include?(new_color)
     first_free_slot = @colors.index(nil)
-    #debugger if first_free_slot.nil?
     raise "Attempted to add #{ChunkyPNG::Color.to_hex(new_color, false)} to a full palette (#{self.inspect})" if first_free_slot.nil?
     @colors[first_free_slot] = new_color
     self
@@ -42,8 +37,11 @@ class Palette
     super
   end
 
-  def dup
-    super.tap { |new_palette| new_palette.instance_variable_set(:@colors, colors.dup) }
+  def dup(default_color: nil)
+    new_palette = super()
+    new_colors = colors.map { |c| c.nil? ? default_color : c }
+    new_palette.instance_variable_set(:@colors, new_colors)
+    new_palette
   end
 
   # Operations
@@ -60,23 +58,35 @@ class Palette
 
   # Fixed and variable parts support
 
-  def variable_colors
-    @colors.first(2)
+  def fixed_colors_start
+    @fixed_colors_start = 0 if @fixed_colors_start.nil?
+    @fixed_colors_start
   end
 
-  def variable_colors=(colors_pair)
-    raise ArgumentError.new("argument must be an array of two elements") if colors_pair.length != 2
-    @colors[0] = colors_pair[0]
-    @colors[1] = colors_pair[1]
+  def fixed_colors_start=(start)
+    raise ArgumentError.new("start must be between 0 and 3") if !start.between?(0, 3)
+    @fixed_colors_start = start
   end
 
   def fixed_colors
-    @colors.last(2)
+    @colors.rotate(fixed_colors_start).first(2)
   end
 
   def fixed_colors=(colors_pair)
     raise ArgumentError.new("argument must be an array of two elements") if colors_pair.length != 2
-    @colors[2] = colors_pair[0]
-    @colors[3] = colors_pair[1]
+    @colors[fixed_colors_start]           = colors_pair[0]
+    @colors[(fixed_colors_start + 1) % 4] = colors_pair[1]
   end
+
+  def variable_colors
+    @colors.rotate(fixed_colors_start).last(2)
+  end
+
+  def variable_colors=(colors_pair)
+    raise ArgumentError.new("argument must be an array of two elements") if colors_pair.length != 2
+    @colors[(fixed_colors_start + 2) % 4] = colors_pair[0]
+    @colors[(fixed_colors_start + 3) % 4] = colors_pair[1]
+  end
+
+
 end

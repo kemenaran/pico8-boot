@@ -152,7 +152,7 @@ VBlankInterrupt:
   reti
 
 ; Popslide version of the scanline interrupt, with random palette access.
-; Can copy up to 8 color pairs (16 colors) with random access per scanline (Mode 0 + Mode 2)
+; Can copy up to 4 color quadruplets (16 colors) with random access per scanline (Mode 0 + Mode 2)
 ScanlineInterruptPopSlideRandom:
   ; Mode 2 - OAM scan (40 GBC cycles)
   ; Initial mode 2 of line 0: use it to prepare the main loop.
@@ -178,7 +178,7 @@ ScanlineInterruptPopSlideRandom:
 
   ; Prepare the color register (4 cycles)
   ld hl, rBGPI
-  ld [hl], BGPIF_AUTOINC | 0 ; 3 cycles
+  ld [hl], BGPIF_AUTOINC | 4 ; 3 cycles
   inc l ; rBGPD   ; 1 cycles
 
   ; Pre-pop two colors
@@ -205,13 +205,27 @@ ScanlineInterruptPopSlideRandom:
   ld [hl], e  ; 2 cycles
   ld [hl], d  ; 2 cycles
 
-  ; Macro: copy the next pair of 2 colors to a specific location (19 cycles)
+  ; Fetch and copy the remaining two colors of the first quadruplet (14 cycles)
+  pop de            ; 3 cycles
+  ld [hl], e        ; 2 cycles
+  ld [hl], d        ; 2 cycles
+  pop de            ; 3 cycles
+  ld [hl], e        ; 2 cycles
+  ld [hl], d        ; 2 cycles
+
+  ; Macro: copy the next quadruplet of 4 colors to a specific location (26 cycles)
 MACRO copy_next_color_pair_to ; index
   ; Update rBGPI to point to the correct color index
   dec l                       ; 1 cycle
   ld [hl], BGPIF_AUTOINC | \1 ; 3 cycles
   inc l                       ; 1 cycle
-  ; Copy two consecutive colors
+  ; Copy four consecutive colors
+  pop de            ; 3 cycles
+  ld [hl], e        ; 2 cycles
+  ld [hl], d        ; 2 cycles
+  pop de            ; 3 cycles
+  ld [hl], e        ; 2 cycles
+  ld [hl], d        ; 2 cycles
   pop de            ; 3 cycles
   ld [hl], e        ; 2 cycles
   ld [hl], d        ; 2 cycles
@@ -222,17 +236,13 @@ ENDM
 
   ; Now copy as much colors as we can
   ; (unrolling the loop with a macro)
-  copy_next_color_pair_to 8
-  copy_next_color_pair_to 16
-  copy_next_color_pair_to 24
-  copy_next_color_pair_to 32
-  copy_next_color_pair_to 40
+  copy_next_color_pair_to 20
+  copy_next_color_pair_to 36
 
   ; Mode 2 - OAM scan, VRAM accessible (40 GBC cycles)
   ; ------------------------------------------------------
 
-  copy_next_color_pair_to 48
-  copy_next_color_pair_to 56
+  copy_next_color_pair_to 52
 
   ; Set the X scroll register (3 cycles)
   ; (This may execute one cycle after VRAM is locked - but even though we still can change rSCX)
@@ -294,13 +304,13 @@ INCBIN "gfx/4.tilemap"
 ALIGN 4
 Frame4Attrmap:
 ; First row
-ds ATTRMAP_WIDTH, $00
+ds ATTRMAP_WIDTH, $07
 ; Colored rows
 REPT 16
 ds ATTRMAP_WIDTH, $00, $01, $02, $03, $04, $05, $06, $07
 ENDR
 ; Last row
-ds ATTRMAP_WIDTH, $00
+ds ATTRMAP_WIDTH, $07
 
 INCLUDE "gfx/4.palettes.asm"
 
