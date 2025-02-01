@@ -23,8 +23,7 @@ palettes-test.gbc: palettes-test.o
 	rgblink -n $(@:.gbc=.sym) -o $@ $^
 	rgbfix --color-only --mbc-type MBC5 --pad-value 0xFF --validate $@
 
-#build: pico8-boot.gbc
-build: palettes-test.gbc
+build: pico8-boot.gbc
 
 clean:
 	rm -f *.o

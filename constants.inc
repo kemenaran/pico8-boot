@@ -5,6 +5,3 @@ DEF TILEMAP_TOP    = 1
 DEF TILEMAP_LEFT   = 2
 DEF ATTRMAP_WIDTH  = 20
 DEF ATTRMAP_HEIGHT = 18
-
-; Number of frames in the animation
-DEF MAX_ANIMATION_FRAMES = 6

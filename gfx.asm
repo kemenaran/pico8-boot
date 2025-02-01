@@ -157,7 +157,7 @@ Pico8Palettes:
   dw C_LIGHT_PEACH, C_RED, C_DARK_PURPLE, C_BLACK
 
 ; Writes $40 bytes located at HL to the BG palettes.
-; Only available during V-Blank.
+; Only available during V-Blank and H-Blank.
 CopyBGPalettes:
   ld a, BCPSF_AUTOINC | 0
   ldh [rBGPI], a
