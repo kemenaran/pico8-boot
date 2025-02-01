@@ -8,7 +8,7 @@
 
 INCLUDE "hardware.inc"
 INCLUDE "pico8.inc"
-INCLUDE "constants.asm"
+INCLUDE "constants.inc"
 
 DEF TILEMAP_WIDTH  = 32
 DEF TILEMAP_HEIGHT = 16
