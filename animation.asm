@@ -99,9 +99,11 @@ LoadFrameData::
 ; Load the tileset required for an animation frame into VRAM
 ; (in several chunks if needed).
 ;
+; TODO: support more than 2 chunks
+;
 ; Inputs:
-;   hFrame               index of the frame to load
-;   hTilesetLoadingStage index of the tileset chunk to load
+;   hFrame              index of the frame to load
+;   hTilesetOffset      offset of the tileset chunk to load
 LoadFrameTileset:
   ; de = frame struct address
   ld hl, AnimationStruct
@@ -110,35 +112,85 @@ LoadFrameTileset:
   ; a = tileset data bank
   ld h, d
   ld l, e
-  ld bc, Frame0.tilesetBank - Frame0
+  ld bc, Frame0.tilesetAddress - Frame0
   add hl, bc
-  ld a, [hli]
 
-  ; Switch the source ROM bank to the tileset data bank
-  ld [rROMB0], a
-
+  ;
   ; Fill hTilesetCopyCommand with the proper parameters
+  ;
+
+DEF BYTES_PER_TILE = 16
+DEF TILES_PER_CHUNK = 128
+DEF OFFSET_PER_CHUNK = BYTES_PER_TILE * TILES_PER_CHUNK
+
   ; source address
+  ld a, [hli] ; Frame.tilesetAddress low
+  ld e, a
+  ld a, [hli] ; Frame.tilesetAddress high
+  ld d, a
+  push hl ; save the animation frame address
+  ; (source += hTilesetOffset)
+  ld hl, hTilesetOffset
   ld a, [hli]
+  ld h, [hl]
+  ld l, a
+  add hl, de
+  ; (set source address)
+  ld a, l
   ldh [hTilesetCopyCommand + 0], a
-  ld a, [hli]
+  ld a, h
   ldh [hTilesetCopyCommand + 1], a
-  ; dest address
-  ; FIXME: allow loading in several chunks
-  ld a, LOW(_VRAM)
+  pop hl ; restore the animation frame address
+
+  ; source bank
+  ld a, [hli] ; Frame.tilesetBank
   ldh [hTilesetCopyCommand + 2], a
-  ld a, HIGH(_VRAM)
-  ldh [hTilesetCopyCommand + 3], a
-  ; tiles count
-  ; FIXME: allow loading in several chunks
+
+  ; dest address
+  push hl ; save the animation frame address
+  ld de, _VRAM
+  ; (dest += hTilesetOffset)
+  ld hl, hTilesetOffset
   ld a, [hli]
+  ld h, [hl]
+  ld l, a
+  add hl, de
+  ; (set dest address)
+  ld a, l
+  ldh [hTilesetCopyCommand + 3], a
+  ld a, h
   ldh [hTilesetCopyCommand + 4], a
+  pop hl ; restore the animation frame address
+
+  ; tiles count
+  ld a, [hl] ; Frame.tilesetCount
+  ld b, 0
+  ld c, a
+  push bc ; save tilesetCount to the stack
+  ; if tilesetCount < TILES_PER_CHUNK, tilesCount = tilesetCount
+  cp a, TILES_PER_CHUNK
+  jr c, .setTilesCount
+  ; else if chunk 0, tilesCount = TILES_PER_CHUNK
+  ldh a, [hTilesetOffset + 0]
+  and a
+  ldh a, [hTilesetOffset + 1]
+  and a
+  jr nz, .secondChunk
+  ld a, TILES_PER_CHUNK
+  jr .setTilesCount
+  ; else tilesCount = tilesetCount - TILES_PER_CHUNK
+.secondChunk
+  ld a, c
+  sub a, TILES_PER_CHUNK
+  ; fallthrough
+.setTilesCount
+  ldh [hTilesetCopyCommand + 5], a
 
   ; Switch to back-buffer VRAM bank
   ld a, [hTilesDataBankBack]
   ld [rVBK], a
 
-  ; Copy
+  ; Copy the tileset chunk
   ld hl, hTilesetCopyCommand
   call CopyTileset
 
@@ -146,9 +198,70 @@ LoadFrameTileset:
   ld a, [hTilesDataBankFront]
   ld [rVBK], a
 
-.done
+  ; If the tileset is smaller than a single chunk, we're done.
+  pop bc ; pop tilesetCount from the stack
+  ld a, c
+  cp a, TILES_PER_CHUNK
+  jr c, .tilesetDone ; if TILES_PER_CHUNK > a
+  ; else if we just copied the second chunk, we're also done.
+  ldh a, [hTilesetOffset + 0]
+  and a
+  ldh a, [hTilesetOffset + 1]
+  and a
+  jp nz, .tilesetDone
+  ; else we just finished the first chunk out of two:
+.chunkDone
+  ; Increment hTilesetOffset
+  ; (hl = [hTilesetOffset])
+  ld hl, hTilesetOffset
+  ld a, [hli]
+  ld h, [hl]
+  ld l, a
+  ; (hl += OFFSET_PER_CHUNK)
+  ld de, OFFSET_PER_CHUNK
+  add hl, de
+  ; ([hTilesetOffset] = hl)
+  ld a, l
+  ldh [hTilesetOffset + 0], a
+  ld a, h
+  ldh [hTilesetOffset + 1], a
+  jr .return
+
+.tilesetDone
+  ; Load a single black tile at the end of the tileset
+  call LoadReferenceBlackTile
+
+  ; Cleanup and move to the next stage
+  xor a
+  ldh [hTilesetOffset + 0], a
+  ldh [hTilesetOffset + 1], a
   ld hl, hFrameLoadingStage
-  inc hl
+  inc [hl]
+
+.return
+  ret
+
+; Load a single black tile at the end of the tileset (index $FF)
+LoadReferenceBlackTile:
+  ; Save the current ROM bank
+  ld a, [rROMB0]
+  push af
+  ; Set the VRAM and ROM banks
+  ld a, [hTilesDataBankBack]
+  ld [rVBK], a
+  ld a, BANK(BlackTile)
+  ld [rROMB0], a
+  ; Configure the copy
+  ld hl, BlackTile
+  ld de, _VRAM + $1000 - 16 ; last tile of tiles data memory
+  ld bc, 16
+  ; Copy the tile
+  call CopyData
+  ; Restore the VRAM and ROM banks
+  ld a, [hTilesDataBankFront]
+  ld [rVBK], a
+  pop af
+  ld [rROMB0], a
   ret
 
 ; Load the tilemap required for an animation frame into VRAM.
@@ -163,21 +276,20 @@ LoadFrameTilemap:
   ld hl, AnimationStruct
   call GetRenderedFrameStruct
 
-  ; a = tilemap data bank
   ld h, d
   ld l, e
-  ld bc, Frame0.tilemapBank - Frame0
+  ld bc, Frame0.tilemapAddress - Frame0
   add hl, bc
-  ld a, [hli]
-
-  ; Switch the source ROM bank to the tilemap data bank
-  ld [rROMB0], a
 
   ; de = source address
   ld a, [hli]
   ld e, a
-  ld a, [hl]
+  ld a, [hli]
   ld d, a
+
+  ; Switch the source ROM bank to the tilemap data bank
+  ld a, [hl]
+  ld [rROMB0], a
 
   ; bc = rows count
   ld b, 0
@@ -201,7 +313,7 @@ LoadFrameTilemap:
 
 .done
   ld hl, hFrameLoadingStage
-  inc hl
+  inc [hl]
   ret
 
 ; Load the BG palette required for an animation frame into VRAM,
@@ -214,5 +326,5 @@ LoadFramePalette:
 
 .done
   ld hl, hFrameLoadingStage
-  inc hl
+  inc [hl]
   jp LoadFrameData.done

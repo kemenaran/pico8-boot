@@ -106,5 +106,9 @@ TODO
     1. Find an extra cycle of optimization (nope)
     2. ✅ Copy colors in 4-colors chunks (instead of 2) [It makes debugging colors harder though]
     3. Hardcode the colors slide (difficult)
-- Implement a single frame back from demo to main
-- Implement all frames
+- ✅ Refactor the main code into a state machine, that dynamically chunks the transferts if needed
+- ✅ Bug: why is frame 2 tileset copied to the front buffer (instead of the back)?
+- ✅ Fix BG attrmap for BG buffer 1 (it should present tiles of bank 1, and not bank 0)
+- ✅ Understand why the frame duration is not honored
+- ✅ Chunk tile transferts
+- Debug chunked tile transferts

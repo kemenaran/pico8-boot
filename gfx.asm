@@ -1,13 +1,19 @@
 ClearBGMap0:
+  ld a, $FF
+
+FillBGMap0:
   ld de, _SCRN0
   ld bc, _SCRN1 - _SCRN0
-  ld a, $FF
+  ld a, a
   jp FillData
 
 ClearBGMap1:
+  ld a, $FF
+
+FillBGMap1:
   ld de, _SCRN1
   ld bc, _SRAM - _SCRN1
-  ld a, $FF
+  ld a, a
   jp FillData
 
 ; Copy a tileset to VRAM, from a tileset definition in hl.

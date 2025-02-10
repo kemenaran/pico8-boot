@@ -23,8 +23,10 @@ EntryPoint:
   ld a, [rLY]
   cp 144
   jr c, .waitVBlank
-  ld a, 0
+  ld a, LCDCF_OFF
   ld [rLCDC], a
+  xor a ; clear interrupts requests, in order to avoid an immediate VBlank interrupt on the first frame
+  ldh [rIF], a
 
   ; Switch CPU to double-speed
   xor  a
@@ -55,43 +57,31 @@ EntryPoint:
   call CopyData
 
   ; Load initial attmaps
-  ld de, DefaultAttrmap
+  ld de, DefaultAttrmapBG0
   ld hl, _SCRN0
   ld bc, ATTRMAP_HEIGHT
   call CopyAttrmap
 
-  ld de, DefaultAttrmap
+  ld de, DefaultAttrmapBG1
   ld hl, _SCRN1
   ld bc, ATTRMAP_HEIGHT
   call CopyAttrmap
 
-  ; Initialize double-buffering
-  ; (first frame will be written to VRAM bank 0)
-  call SwapBuffers.init
-
-  ; Load a fully black screen for the first frame
-  xor a
-  ldh [hFrame], a
-  call LoadFrameData
+  ; Load initial BG palettes
+  ld hl, Pico8Palettes
+  call CopyBGPalettes
 
   ; Present the first frame
-  call SwapBuffers
-  call IncrementAnimationFrame
+  call SwapBuffers.presentBufferA
+
+  ; Configure interrupts
+  ld a, IEF_VBLANK
+  ldh [rIE], a
+  ei
 
   ; Turn the LCD on
   ld a, LCDCF_ON | LCDCF_BGON | LCDCF_BLK01
   ld [rLCDC], a
-
-  ; During the first (blank) frame, initialize the DMG palette
-  ; TODO: is this required on GBC?
-  ld a, %11100100
-  ld [rBGP], a
-
-  ; Configure interrupts
-  di
-  ld a, IEF_VBLANK
-  ldh [rIE], a
-  ei
 
   ; Start the main loop
   jp MainLoop
@@ -103,16 +93,20 @@ MainLoop:
   ; Ensure we actually reached v-blank
 .ensureVBlank
   ld a, [rLY]
-  cp $90 ; 144
+  cp 144
   jp c, .ensureVBlank
+
+  call SwapBuffersIfReady
 
   ; Loop
   jp MainLoop
 
 ; Executed by the VBlank interrupt handler
 VBlankInterrupt:
-  ; Increment the VI count
+  ; Increment the VI counts
   ld hl, hVICount
+  inc [hl]
+  ld hl, hFrameVICount
   inc [hl]
 
   ; If there are still frame data to load, do it.
@@ -133,12 +127,13 @@ LoadFrameDataIfNeeded:
   ; If we reached the last animation frame, return early.
   ld hl, AnimationStruct
   call GetAnimationFramesCount
-  ld a, [hFrame]
+  ldh a, [hFrame]
   cp a, c
   jp z, .return
 
   ; If there are still data to load for this frame, execute the next loading stage.
   ldh a, [hFrameLoaded]
+  and a
   jp z, LoadFrameData
 
 .return
@@ -147,18 +142,25 @@ LoadFrameDataIfNeeded:
 PresentFrameIfNeeded:
   ; If the next frame is still loading, we can't present it yet
   ldh a, [hFrameLoaded]
+  and a
   jp z, .return
 
-  ; bc = intended duration of the presented frame
+  ; If no frame has been presented yet, immediately present the first one
+  ldh a, [hFrame]
+  and a
+  jp z, .presentFrame
+
+  ; If the presented frame duration is larger than the intended duration,
+  ; time to present the next frame.
   ld hl, AnimationStruct
   call GetPresentedFrameStruct
-  call GetFrameDuration
-
-  ; If the current frame duration is larger than the intended duration,
-  ; time to present the next frame.
+  call GetFrameDuration ; c = intended duration of the presented frame
   ldh a, [hFrameVICount]
   cp a, c
-  call z, AnimationFrameReady
+  jp nz, .return
+
+.presentFrame
+  call AnimationFrameReady
 
 .return
   ret
@@ -187,8 +189,8 @@ SwapBuffersIfReady:
 
   ; Swap buffers
   xor a
-  ld [hNeedsPresentingFrame], a
-  ld [hFrameVICount], a
+  ldh [hNeedsPresentingFrame], a
+  ldh [hFrameVICount], a
   call IncrementAnimationFrame
   ; fallthrough
 
@@ -199,11 +201,11 @@ SwapBuffers:
   jp z, .presentBufferB
 
 .presentBufferA
-  ; Tiles data is presented from VRAM bank 0
-  ld a, 1
-  ld [hTilesDataBankBack], a
+  ; Tiles data are presented from VRAM bank 0
   xor a
   ld [hTilesDataBankFront], a
+  ld a, 1
+  ld [hTilesDataBankBack], a
   ; Switch to front VRAM bank
   ld [rVBK], a
   ; BG map is presented from $9800
@@ -216,13 +218,12 @@ SwapBuffers:
   res LCDCB_BG9C00, [hl]
   ret
 
-.init
 .presentBufferB
-  ; Tiles data is presented from VRAM bank 1
-  xor a
-  ld [hTilesDataBankBack], a
+  ; Tiles data are presented from VRAM bank 1
   ld a, 1
   ld [hTilesDataBankFront], a
+  xor a
+  ld [hTilesDataBankBack], a
   ; Switch to front VRAM bank
   ld [rVBK], a
   ; BG map is presented from $9C00
@@ -239,75 +240,7 @@ INCLUDE "table_jump.asm"
 INCLUDE "memory.asm"
 INCLUDE "gfx.asm"
 INCLUDE "animation.asm"
-
-; -------------------------------------------------------------------------------
-; Animated picture definition
-
-AnimationStruct:
-.framesCount
-  db 2
-.frames
-  dw Frame0
-  dw Frame1
-
-Frame0:
-.duration       db 6
-.tilesetBank    db BANK(Frame0Tiles)
-.tilesetAddress dw Frame0Tiles
-.tilesetCount   dw (Frame0Tiles.end - Frame0Tiles / 16)
-.tilemapBank    db BANK(Frame0Tilemap)
-.tilemapAddress dw Frame0Tilemap
-
-Frame1:
-.duration       db 6
-.tilesetBank    db BANK(Frame1Tiles)
-.tilesetAddress dw Frame1Tiles
-.tilesetCount   dw (Frame1Tiles.end - Frame1Tiles) / 16
-.tilemapBank    db BANK(Frame1Tilemap)
-.tilemapAddress dw Frame1Tilemap
-
-; -------------------------------------------------------------------------------
-; Tilemaps data
-
-Frame0Tilemap:
-  ds TILEMAP_WIDTH * TILEMAP_HEIGHT, $00 ; all black
-.end
-
-Frame1Tilemap:
-INCBIN "gfx/1.bw.tilemap"
-  .end
-
-; -------------------------------------------------------------------------------
-; Attrmaps
-
-DefaultAttrmap:
-  ; First row
-  ds ATTRMAP_WIDTH, $07
-  ; Colored rows
-  REPT 16
-  ds ATTRMAP_WIDTH, $00, $01, $02, $03, $04, $05, $06, $07
-  ENDR
-  ; Last row
-  ds ATTRMAP_WIDTH, $07
-.end
-
-; -------------------------------------------------------------------------------
-SECTION "Tilesets - frame 1-4", ROMX, BANK[$01]
-
-ds align[4] ; Align to 16-bytes boundaries, for HDMA transfer
-BlackTile:
-  db 16, $FF
-.end
-
-ds align[4]
-Frame0Tiles:
-  db 16, $FF
-.end
-
-ds align[4]
-Frame1Tiles:
-  INCBIN "gfx/1.bw.tileset.2bpp"
-.end
+INCLUDE "gfx/animation.inc"
 
 ; -------------------------------------------------------------------------------
 SECTION "WRAM Stack", WRAM0[$CE00]
@@ -323,20 +256,20 @@ DEF wStackTop EQU $CFFF
 SECTION "HRAM", HRAM[$FF80]
 
 ; Total number of vertical interrupts that occured since the beginning
-hVICount: ds 1
+hVICount: db
 
 ; Number of vertical interrupts that occured for the presented frame
-hFrameVICount: ds 1
+hFrameVICount: db
 
 ; Index of the animation frame being rendered
 ; (the frame being presented is the previous one)
-hFrame: ds 1
+hFrame: db
 
 ; Index of the loading stage of the animation frame being rendered
-hFrameLoadingStage: ds 1
+hFrameLoadingStage: db
 
-; Index of the next tileset chunk to load
-hTilesetLoadingStage: ds 1
+; Address offset for the next tileset chunk to load
+hTilesetOffset: dw
 
 ; Scratchpad structure used by CopyTileset
 hTilesetCopyCommand:

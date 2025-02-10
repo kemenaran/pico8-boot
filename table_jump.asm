@@ -10,18 +10,15 @@
 ; Input:
 ;   a:  index of the routine address in the jump table
 TableJump::
-    ; de = a * 2
+    ; de = a
     ld   e, a
-    ld   d, $00
-    sla  e
-    rl   d
+    ld   d, 0
     ; Load target adress into hl
     pop  hl
-    add  hl, de  ; Add the base address and the offset
-    ld   e, [hl] ; Load the low byte of the target address
-    inc  hl
-    ld   d, [hl] ; Load the high byte of the target address
-    ld   l, e
-    ld   h, d
+    add  hl, de  ; Add the base address and the offset * 2
+    add  hl, de
+    ld a, [hli] ; Load the low byte of the target address
+    ld h, [hl]  ; Load the high byte of the target address
+    ld l, a
     ; Jump to the target address
-    jp   hl
+    jp hl
