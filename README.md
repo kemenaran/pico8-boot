@@ -111,4 +111,7 @@ TODO
 - ✅ Fix BG attrmap for BG buffer 1 (it should present tiles of bank 1, and not bank 0)
 - ✅ Understand why the frame duration is not honored
 - ✅ Chunk tile transferts
-- Debug chunked tile transferts
+- ✅ Debug chunked tile transferts
+- ✅ Implement all animations frames
+- Implement H-Blank handler for palettes
+- Implement debug with joypad (slowdown, reset, etc)

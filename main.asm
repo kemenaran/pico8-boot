@@ -3,6 +3,7 @@
 INCLUDE "hardware.inc"
 INCLUDE "pico8.inc"
 INCLUDE "constants.inc"
+INCLUDE "options.inc"
 
 SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
