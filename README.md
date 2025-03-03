@@ -113,5 +113,6 @@ TODO
 - ✅ Chunk tile transferts
 - ✅ Debug chunked tile transferts
 - ✅ Implement all animations frames
+- Implement H-Blank handler for scrollX animation
 - Implement H-Blank handler for palettes
 - Implement debug with joypad (slowdown, reset, etc)

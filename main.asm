@@ -95,20 +95,7 @@ MainLoop:
 .ensureVBlank
   ld a, [rLY]
   cp 144
-  jp c, .ensureVBlank
-
-  call SwapBuffersIfReady
-
-  ; Loop
-  jp MainLoop
-
-; Executed by the VBlank interrupt handler
-VBlankInterrupt:
-  ; Increment the VI counts
-  ld hl, hVICount
-  inc [hl]
-  ld hl, hFrameVICount
-  inc [hl]
+  jr c, .ensureVBlank
 
   ; If there are still frame data to load, do it.
   call LoadFrameDataIfNeeded
@@ -116,7 +103,11 @@ VBlankInterrupt:
   ; If a new frame is ready, present it.
   ; (And otherwise, the previous frame remains displayed.)
   call PresentFrameIfNeeded
-  reti
+
+  call SwapBuffersIfReady
+
+  ; Loop
+  jr MainLoop
 
 ; Execute a data-loading step on each VBlank.
 ;
@@ -237,6 +228,7 @@ SwapBuffers:
   set LCDCB_BG9C00, [hl]
   ret
 
+INCLUDE "interrupt_vblank.asm"
 INCLUDE "table_jump.asm"
 INCLUDE "memory.asm"
 INCLUDE "gfx.asm"
