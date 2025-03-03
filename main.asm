@@ -4,8 +4,11 @@ INCLUDE "src/constants.inc"
 INCLUDE "src/options.inc"
 INCLUDE "src/debug.inc"
 
-SECTION "Interrupt VBlank", ROM0[$0040]
+SECTION "VBlank interrupt", ROM0[$0040]
   jp VBlankInterrupt
+
+SECTION "STAT Interrupt", ROM0[$0048]
+  jp HblankInterrupt
 
 SECTION "Header", ROM0[$100]
   jp EntryPoint
@@ -231,6 +234,7 @@ SwapBuffers:
   ret
 
 INCLUDE "src/interrupt_vblank.asm"
+INCLUDE "src/interrupt_hblank.asm"
 INCLUDE "src/table_jump.asm"
 INCLUDE "src/memory.asm"
 INCLUDE "src/gfx.asm"
