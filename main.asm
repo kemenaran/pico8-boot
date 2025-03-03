@@ -1,9 +1,7 @@
-; From https://gbdev.io/gb-asm-tutorial/part1/hello_world.html
-
-INCLUDE "hardware.inc"
-INCLUDE "pico8.inc"
-INCLUDE "constants.inc"
-INCLUDE "options.inc"
+INCLUDE "src/hardware.inc"
+INCLUDE "src/pico8.inc"
+INCLUDE "src/constants.inc"
+INCLUDE "src/options.inc"
 
 SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
@@ -228,11 +226,11 @@ SwapBuffers:
   set LCDCB_BG9C00, [hl]
   ret
 
-INCLUDE "interrupt_vblank.asm"
-INCLUDE "table_jump.asm"
-INCLUDE "memory.asm"
-INCLUDE "gfx.asm"
-INCLUDE "animation.asm"
+INCLUDE "src/interrupt_vblank.asm"
+INCLUDE "src/table_jump.asm"
+INCLUDE "src/memory.asm"
+INCLUDE "src/gfx.asm"
+INCLUDE "src/animation.asm"
 INCLUDE "gfx/animation.inc"
 
 ; -------------------------------------------------------------------------------
