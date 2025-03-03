@@ -110,7 +110,7 @@ MainLoop:
   ; Loop
   jr MainLoop
 
-; Execute a data-loading step on each VBlank.
+; Execute a data-loading step during each VBlank.
 ;
 ; The data-loading step may result in a new frame being ready to be presented,
 ; or require additional loading steps during the next VBlank.
@@ -150,7 +150,7 @@ PresentFrameIfNeeded:
   call GetFrameDuration ; c = intended duration of the presented frame
   ldh a, [hFrameVICount]
   cp a, c
-  jp nz, .return
+  jp c, .return ; skip presenting the frame if hFrameVICount > intended frame duration
 
 .presentFrame
   call AnimationFrameReady
@@ -181,6 +181,7 @@ SwapBuffersIfReady:
   ret z
 
   ; Swap buffers
+  D_LOG "Swapping buffers"
   xor a
   ldh [hNeedsPresentingFrame], a
   ldh [hFrameVICount], a

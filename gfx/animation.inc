@@ -15,7 +15,7 @@ AnimationStruct:
   dw Frame6
 
 Frame0:
-.duration       db 4 * ANIMATION_SPEED_FACTOR
+.duration       db 3 * ANIMATION_SPEED_FACTOR
 .tilesetAddress dw Frame0Tiles
 .tilesetBank    db BANK(Frame0Tiles)
 .tilesetCount   db (Frame0Tiles.end - Frame0Tiles) / 16
@@ -23,7 +23,7 @@ Frame0:
 .tilemapBank    db BANK(Frame0Tilemap)
 
 Frame1:
-.duration       db 4 * ANIMATION_SPEED_FACTOR
+.duration       db 3 * ANIMATION_SPEED_FACTOR
 .tilesetAddress dw Frame1Tiles
 .tilesetBank    db BANK(Frame1Tiles)
 .tilesetCount   db (Frame1Tiles.end - Frame1Tiles) / 16
@@ -31,7 +31,7 @@ Frame1:
 .tilemapBank    db BANK(Frame1Tilemap)
 
 Frame2:
-.duration       db 4 * ANIMATION_SPEED_FACTOR
+.duration       db 3 * ANIMATION_SPEED_FACTOR
 .tilesetAddress dw Frame2Tiles
 .tilesetBank    db BANK(Frame2Tiles)
 .tilesetCount   db (Frame2Tiles.end - Frame2Tiles) / 16
@@ -39,7 +39,7 @@ Frame2:
 .tilemapBank    db BANK(Frame2Tilemap)
 
 Frame3:
-.duration       db 4 * ANIMATION_SPEED_FACTOR
+.duration       db 3 * ANIMATION_SPEED_FACTOR
 .tilesetAddress dw Frame3Tiles
 .tilesetBank    db BANK(Frame3Tiles)
 .tilesetCount   db (Frame3Tiles.end - Frame3Tiles) / 16
@@ -47,7 +47,7 @@ Frame3:
 .tilemapBank    db BANK(Frame3Tilemap)
 
 Frame4:
-.duration       db 4 * ANIMATION_SPEED_FACTOR
+.duration       db 3 * ANIMATION_SPEED_FACTOR
 .tilesetAddress dw Frame4Tiles
 .tilesetBank    db BANK(Frame4Tiles)
 .tilesetCount   db (Frame4Tiles.end - Frame4Tiles) / 16
@@ -55,7 +55,7 @@ Frame4:
 .tilemapBank    db BANK(Frame4Tilemap)
 
 Frame5:
-.duration       db 4 * ANIMATION_SPEED_FACTOR
+.duration       db 3 * ANIMATION_SPEED_FACTOR
 .tilesetAddress dw Frame5Tiles
 .tilesetBank    db BANK(Frame5Tiles)
 .tilesetCount   db (Frame5Tiles.end - Frame5Tiles) / 16
@@ -63,7 +63,7 @@ Frame5:
 .tilemapBank    db BANK(Frame5Tilemap)
 
 Frame6:
-.duration       db 4 * ANIMATION_SPEED_FACTOR
+.duration       db 3 * ANIMATION_SPEED_FACTOR
 .tilesetAddress dw Frame6Tiles
 .tilesetBank    db BANK(Frame6Tiles)
 .tilesetCount   db (Frame6Tiles.end - Frame6Tiles) / 16
