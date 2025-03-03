@@ -2,6 +2,7 @@ INCLUDE "src/hardware.inc"
 INCLUDE "src/pico8.inc"
 INCLUDE "src/constants.inc"
 INCLUDE "src/options.inc"
+INCLUDE "src/debug.inc"
 
 SECTION "Interrupt VBlank", ROM0[$0040]
   jp VBlankInterrupt
@@ -38,6 +39,8 @@ EntryPoint:
 
   ; Initialize stack
   ld sp, wStackTop
+
+  D_LOG "Start"
 
   ; Clear HRAM
   ld hl, _HRAM
