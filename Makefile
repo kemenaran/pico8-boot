@@ -3,7 +3,7 @@
 .DEFAULT_GOAL := build
 
 asm_files = $(shell find . -type f -name '*.asm' -o -name '*.inc')
-gfx_files = $(shell find ./gfx -type f -name '*.png')
+gfx_files = $(shell find ./gfx -type f -name '*.png' -o -name '*.tilemap')
 
 # Compile a PNG file to a 2BPP file, without any special conversion.
 %.2bpp: %.png
