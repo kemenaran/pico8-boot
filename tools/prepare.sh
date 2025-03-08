@@ -9,7 +9,7 @@
 # Usage:
 #   tools/prepare.sh 4
 
-NAME="$1" # image name
+NAME="$1" # image name (minus the extension)
 
 # Rotate the original image, to align similar colors on the same column
 tools/pngshift.rb "original-gfx/${NAME}.png" "original-gfx/shifted/${NAME}.png"

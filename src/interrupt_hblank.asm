@@ -1,2 +1,0 @@
-HblankInterrupt:
-  reti

@@ -12,11 +12,11 @@ ELSE ; DEBUG > 0
 ; Accepts a string as input.
 MACRO D_LOG
   ld  d, d
-  jr .end\@
+  jr :+
   dw $6464
   dw $0000
   db \1
-.end\@:
+:
 ENDM
 
 ; Set a source breakpoint for the no$gmb / bgb debugger.

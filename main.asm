@@ -4,11 +4,11 @@ INCLUDE "src/constants.inc"
 INCLUDE "src/options.inc"
 INCLUDE "src/debug.inc"
 
-SECTION "VBlank interrupt", ROM0[$0040]
+SECTION "VBlank interrupt", ROM0[INT_HANDLER_VBLANK]
   jp VBlankInterrupt
 
-SECTION "STAT Interrupt", ROM0[$0048]
-  jp HblankInterrupt
+SECTION "STAT Interrupt", ROM0[INT_HANDLER_STAT]
+  jp STATInterrupt
 
 SECTION "Header", ROM0[$100]
   jp EntryPoint
@@ -80,7 +80,11 @@ EntryPoint:
   call SwapBuffers.presentBufferA
 
   ; Configure interrupts
-  ld a, IEF_VBLANK
+  ld a, STATF_LYC ; configure the STAT interrupt to enable LY-compare
+  ldh [rSTAT], a
+  ld a, IMAGE_FIRST_SCANLINE - 1 ; fire the STAT interrupt just before the first scanline of the image
+  ldh [rLYC], a
+  ld a, IEF_VBLANK | IEF_STAT ; enable VBlank and STAT interrupts
   ldh [rIE], a
   ei
 
@@ -184,7 +188,6 @@ SwapBuffersIfReady:
   ret z
 
   ; Swap buffers
-  D_LOG "Swapping buffers"
   xor a
   ldh [hNeedsPresentingFrame], a
   ldh [hFrameVICount], a
@@ -199,6 +202,7 @@ SwapBuffers:
 
 .presentBufferA
   ; Tiles data are presented from VRAM bank 0
+  D_LOG "Swapping buffers (front: bank 0; back: bank 1)"
   xor a
   ld [hTilesDataBankFront], a
   ld a, 1
@@ -217,6 +221,7 @@ SwapBuffers:
 
 .presentBufferB
   ; Tiles data are presented from VRAM bank 1
+  D_LOG "Swapping buffers (front: bank 1; back: bank 0)"
   ld a, 1
   ld [hTilesDataBankFront], a
   xor a
@@ -234,7 +239,7 @@ SwapBuffers:
   ret
 
 INCLUDE "src/interrupt_vblank.asm"
-INCLUDE "src/interrupt_hblank.asm"
+INCLUDE "src/interrupt_stat.asm"
 INCLUDE "src/table_jump.asm"
 INCLUDE "src/memory.asm"
 INCLUDE "src/gfx.asm"

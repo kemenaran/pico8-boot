@@ -90,7 +90,7 @@ INCBIN "gfx/3.bw.tilemap"
 .end
 
 Frame4Tilemap:
-INCBIN "gfx/4.bw.tilemap"
+INCBIN "gfx/4.tilemap"
 .end
 
 Frame5Tilemap:
@@ -157,7 +157,7 @@ Frame3Tiles:
 
 ds align[4]
 Frame4Tiles:
-  INCBIN "gfx/4.bw.tileset.2bpp"
+  INCBIN "gfx/4.tileset.2bpp"
 .end
 
 ; -------------------------------------------------------------------------------

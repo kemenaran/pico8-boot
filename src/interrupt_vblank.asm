@@ -5,4 +5,5 @@ VBlankInterrupt:
   inc [hl]
   ld hl, hFrameVICount
   inc [hl]
+
   reti
