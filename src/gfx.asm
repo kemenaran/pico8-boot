@@ -24,14 +24,15 @@ FillBGMap1:
 ;   dw <dest_address>
 ;   db <tiles_count>
 ;
-; HDMA is used if the LCD screen is enabled (regular loop otherwise)
+; DMA is used if the LCD screen is enabled - and a regular loop otherwise.
+; (In that case, the tilemap source address must be aligned to 16 bytes.)
 CopyTileset:
   ld a, [rLCDC]
   and LCDCF_ON
   jp z, .noDMA
 
 .dma
-  ; Copy tileset definition to HDMA registers
+  ; Copy tileset definition to DMA registers
   ; Source (low)
   ld a, [hli]
   ld [rHDMA2], a
@@ -51,7 +52,7 @@ CopyTileset:
   ld [rHDMA3], a
   ; Tiles count
   ld a, [hl]
-  sub 1 ; HDMA transfers N+1 tiles
+  sub 1 ; DMA transfers N+1 tiles
   ld [rHDMA5], a ; transfer starts
   ret
 
@@ -87,7 +88,20 @@ CopyTileset:
   jp CopyData
 
 ; Copy a tilemap of c rows from de to hl (a rectangular region of VRAM)
+;
+; DMA can be used if and only if:
+; - the tilemap is exactly 32 tiles wide,
+; - the LCD screen is enabled.
+; (In that case, the tilemap source address must be aligned to 16 bytes.)
+; A regular unrolled loop is used otherwise.
 CopyTilemap:
+IF TILEMAP_WIDTH == 32
+  ld a, [rLCDC]
+  and LCDCF_ON
+  jp nz, .dma
+  ; fallthrough: use loop version
+ENDC
+
 .loop
   ; Unroll the loop: copy a row in a single pass
 REPT TILEMAP_WIDTH
@@ -103,6 +117,30 @@ ENDR
   ; If not at the end yet, loop
   dec c
   jp nz, .loop
+  ret
+
+.dma
+  ; Copy tileset definition to DMA registers
+  ; Source (high)
+  ld a, d
+  ld [rHDMA1], a
+  ; Source (low)
+  ld a, e
+  ld [rHDMA2], a
+  ; Dest (high)
+  ; (Mask the higher bit of the destination, because DMA destination is an offset relative to $8000)
+  ld a, h
+  and a, %01111111
+  ld [rHDMA3], a
+  ; Dest (low)
+  ld a, l
+  ld [rHDMA4], a
+  ; length, as 16-bytes chunks count
+  ; (32 bytes per tilemap row, so bytes = rowsCount * 2)
+  ld a, c
+  add a, a ; a * 2
+  sub 1 ; DMA transfers N+1 chunks
+  ld [rHDMA5], a ; transfer starts
   ret
 
 ; Copy an attributes map of c rows from de to hl (a rectangular region of VRAM)

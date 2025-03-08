@@ -4,21 +4,21 @@
 AnimationStruct:
 .struct
 .framesCount
-  db 7
+  db 2
 .frames
   dw Frame0
-  dw Frame1
-  dw Frame2
-  dw Frame3
   dw Frame4
-  dw Frame5
-  dw Frame6
+  ;dw Frame2
+  ;dw Frame3
+  ;dw Frame4
+  ;dw Frame5
+  ;dw Frame6
 
 Frame0:
 .duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw Frame0Tiles
-.tilesetBank    db BANK(Frame0Tiles)
-.tilesetCount   db (Frame0Tiles.end - Frame0Tiles) / 16
+.tilesetAddress dw BlackTile
+.tilesetBank    db BANK(BlackTile)
+.tilesetCount   db (BlackTile.end - BlackTile) / 16
 .tilemapAddress dw Frame0Tilemap
 .tilemapBank    db BANK(Frame0Tilemap)
 
@@ -70,33 +70,50 @@ Frame6:
 .tilemapAddress dw Frame6Tilemap
 .tilemapBank    db BANK(Frame6Tilemap)
 
+Frame4InitialPalettes:
+  dw $5ED6, $0000, $2384, $7E64
+  dw $7E64, $458D, $6FBF, $0000
+  dw $1C1F, $0000, $458D, $2384
+  dw $458D, $7E64, $065F, $0000
+  dw $139F, $0000, $2384, $7E64
+  dw $139F, $7D1F, $2384, $0000
+  dw $7E64, $0000, $139F, $2384
+  dw $7E64, $139F, $458D, $0000
+
 ; -------------------------------------------------------------------------------
 ; Tilemaps data
 
+ds align[4] ; Align to 16-bytes boundaries, for DMA transfers
 Frame0Tilemap:
   ds TILEMAP_WIDTH * TILEMAP_HEIGHT, $00 ; all black
 .end
 
+ds align[4]
 Frame1Tilemap:
 INCBIN "gfx/1.bw.tilemap"
 .end
 
+ds align[4]
 Frame2Tilemap:
 INCBIN "gfx/2.bw.tilemap"
 .end
 
+ds align[4]
 Frame3Tilemap:
 INCBIN "gfx/3.bw.tilemap"
 .end
 
+ds align[4]
 Frame4Tilemap:
 INCBIN "gfx/4.tilemap"
 .end
 
+ds align[4]
 Frame5Tilemap:
 INCBIN "gfx/5.bw.tilemap"
 .end
 
+ds align[4]
 Frame6Tilemap:
   ds TILEMAP_WIDTH * TILEMAP_HEIGHT, $00 ; all black
 .end
@@ -130,13 +147,8 @@ DefaultAttrmapBG1:
 ; -------------------------------------------------------------------------------
 SECTION "Tilesets - frame 1-4", ROMX, BANK[$01]
 
-align 4 ; Align to 16-bytes boundaries, for HDMA transfer
+align 4 ; Align to 16-bytes boundaries, for DMA transfers
 BlackTile:
-  ds 16, $FF
-.end
-
-ds align[4]
-Frame0Tiles:
   ds 16, $FF
 .end
 

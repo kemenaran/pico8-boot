@@ -73,7 +73,7 @@ EntryPoint:
   call CopyAttrmap
 
   ; Load initial BG palettes
-  ld hl, Pico8Palettes
+  ld hl, Frame4InitialPalettes
   call CopyBGPalettes
 
   ; Present the first frame
