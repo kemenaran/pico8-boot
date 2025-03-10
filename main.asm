@@ -285,17 +285,21 @@ hTilesetCopyCommand:
 .tilesCount db
 
 ; Whether the next frame resources are loaded
-hFrameLoaded: ds 1
+hFrameLoaded: db
 
 ; Whether the next frame should be presented at the next vblank
-hNeedsPresentingFrame: ds 1
+hNeedsPresentingFrame: db
 
 ; VRAM bank for tiles data currently presented (0 or 1)
-hTilesDataBankFront: ds 1
+hTilesDataBankFront: db
 ; VRAM bank for tiles data currently rendered into (0 or 1)
-hTilesDataBankBack: ds 1
+hTilesDataBankBack: db
 
 ; High-byte of the BG map area currently presented
-hBGMapAddressFront: ds 1
+hBGMapAddressFront: db
 ; High-byte of the BG map area currently rendered into
-hBGMapAddressBack: ds 1
+hBGMapAddressBack: db
+
+; Original address of the stack pointer
+; (sp gets modified during the interrupt popslide.)
+hStackPointer: dw

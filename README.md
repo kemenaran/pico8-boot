@@ -116,6 +116,9 @@ TODO
 - ✅ Implement H-Blank handler for scrollX animation
 - ✅ Implement DMA transfer for tilemaps
 - ✅ Make the default pico8 palette loaded closer to the dynamic palette
-- Scroll-compensate the source assets for all images
-- Implement H-Blank handler for palettes
-- Implement debug with joypad (slowdown, reset, etc)
+- ✅ Scroll-compensate the source assets for all images
+- ✅ Implement initial palettes loading
+- ✅ Implement H-Blank handler for palettes
+- Fix colors for each image (especially frame 1)
+- Move ANIMATION_SPEED_FACTOR out of the frames definitions
+- Split libraries into CoreImage, CoreGraphics, CoreAnimation

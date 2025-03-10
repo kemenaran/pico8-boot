@@ -108,7 +108,8 @@ if options[:output_palettes]
     end
     # Write colors pairs to update on each scanline
     f.puts("")
-    f.puts("Frame#{image_name}PalettesDiffForScanline:")
+    f.puts("; Palettes diff for each scanline")
+    f.puts("Frame#{image_name}PalettesDiffs:")
     palettes_sets_for_line.each.with_index do |palettes_set_for_scanline, line|
       f.puts "._#{line}"
       palettes_set_for_scanline.each do |palette|

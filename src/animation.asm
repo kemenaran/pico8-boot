@@ -77,6 +77,38 @@ GetFrameDuration::
   pop hl
   ret
 
+; Retrieve the palettes diffs of a frame.
+;
+; Inputs:
+;   de  address of the frame struct
+; Returns:
+;   hl  address of the palettes diff start
+;   b   bank of the palettes diff
+;   z   whether the address is 0
+GetFramePalettesDiff::
+  push de
+  ; de = Frame.palettesDiff
+  ld h, d
+  ld l, e
+  ld bc, Frame0.palettesDiff - Frame0
+  add hl, bc
+  ld a, [hli]
+  ld e, a
+  ld a, [hli]
+  ld d, a
+  ; b = Frame.palettesDiffBank
+  ld a, [hl]
+  ld b, a
+  ; hl = de
+  ld h, d
+  ld l, e
+  ; Set the z flag if palettesDiff == $0000
+  ld a, h
+  or a, l
+  ; Cleanup and return
+  pop de
+  ret
+
 ; Load the graphical resources required for an animation frame, in several stages.
 ;
 ; Inputs:

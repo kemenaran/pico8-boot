@@ -203,7 +203,7 @@ Pico8Palettes:
 ; Writes $40 bytes located at HL to the BG palettes.
 ; Only available during V-Blank and H-Blank.
 ;
-; TODO: can be optimized using a popslide.
+; The loop is unrolled. If needed, it can be further optimized using a popslide.
 CopyBGPalettes:
   ld a, BCPSF_AUTOINC | 0
   ldh [rBGPI], a
