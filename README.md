@@ -114,7 +114,8 @@ TODO
 - ✅ Debug chunked tile transferts
 - ✅ Implement all animations frames
 - ✅ Implement H-Blank handler for scrollX animation
-- Scroll-compensate the source assets
-- Make the default pico8 palette loaded closer to the dynamic palette
+- ✅ Implement DMA transfer for tilemaps
+- ✅ Make the default pico8 palette loaded closer to the dynamic palette
+- Scroll-compensate the source assets for all images
 - Implement H-Blank handler for palettes
 - Implement debug with joypad (slowdown, reset, etc)

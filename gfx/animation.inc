@@ -4,15 +4,15 @@
 AnimationStruct:
 .struct
 .framesCount
-  db 2
+  db 7
 .frames
   dw Frame0
+  dw Frame1
+  dw Frame2
+  dw Frame3
   dw Frame4
-  ;dw Frame2
-  ;dw Frame3
-  ;dw Frame4
-  ;dw Frame5
-  ;dw Frame6
+  dw Frame5
+  dw Frame6
 
 Frame0:
 .duration       db 3 * ANIMATION_SPEED_FACTOR
@@ -64,11 +64,11 @@ Frame5:
 
 Frame6:
 .duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw Frame6Tiles
-.tilesetBank    db BANK(Frame6Tiles)
-.tilesetCount   db (Frame6Tiles.end - Frame6Tiles) / 16
-.tilemapAddress dw Frame6Tilemap
-.tilemapBank    db BANK(Frame6Tilemap)
+.tilesetAddress dw BlackTile
+.tilesetBank    db BANK(BlackTile)
+.tilesetCount   db (BlackTile.end - BlackTile) / 16
+.tilemapAddress dw BlackTilemap
+.tilemapBank    db BANK(BlackTilemap)
 
 Frame4InitialPalettes:
   dw $5ED6, $0000, $2384, $7E64
@@ -84,23 +84,23 @@ Frame4InitialPalettes:
 ; Tilemaps data
 
 ds align[4] ; Align to 16-bytes boundaries, for DMA transfers
-Frame0Tilemap:
+BlackTilemap:
   ds TILEMAP_WIDTH * TILEMAP_HEIGHT, $00 ; all black
 .end
 
 ds align[4]
 Frame1Tilemap:
-INCBIN "gfx/1.bw.tilemap"
+INCBIN "gfx/1.tilemap"
 .end
 
 ds align[4]
 Frame2Tilemap:
-INCBIN "gfx/2.bw.tilemap"
+INCBIN "gfx/2.tilemap"
 .end
 
 ds align[4]
 Frame3Tilemap:
-INCBIN "gfx/3.bw.tilemap"
+INCBIN "gfx/3.tilemap"
 .end
 
 ds align[4]
@@ -110,12 +110,7 @@ INCBIN "gfx/4.tilemap"
 
 ds align[4]
 Frame5Tilemap:
-INCBIN "gfx/5.bw.tilemap"
-.end
-
-ds align[4]
-Frame6Tilemap:
-  ds TILEMAP_WIDTH * TILEMAP_HEIGHT, $00 ; all black
+INCBIN "gfx/5.tilemap"
 .end
 
 ; -------------------------------------------------------------------------------
@@ -154,17 +149,17 @@ BlackTile:
 
 ds align[4]
 Frame1Tiles:
-  INCBIN "gfx/1.bw.tileset.2bpp"
+  INCBIN "gfx/1.tileset.2bpp"
 .end
 
 ds align[4]
 Frame2Tiles:
-  INCBIN "gfx/2.bw.tileset.2bpp"
+  INCBIN "gfx/2.tileset.2bpp"
 .end
 
 ds align[4]
 Frame3Tiles:
-  INCBIN "gfx/3.bw.tileset.2bpp"
+  INCBIN "gfx/3.tileset.2bpp"
 .end
 
 ds align[4]
@@ -175,12 +170,8 @@ Frame4Tiles:
 ; -------------------------------------------------------------------------------
 SECTION "Tilesets - frame 5-6", ROMX, BANK[$02]
 
-ds align[4]
+align 4
 Frame5Tiles:
-  INCBIN "gfx/5.bw.tileset.2bpp"
+  INCBIN "gfx/5.tileset.2bpp"
 .end
 
-ds align[4]
-Frame6Tiles:
-  ds 16, $FF
-.end

@@ -87,6 +87,4 @@ class Palette
     @colors[(fixed_colors_start + 2) % 4] = colors_pair[0]
     @colors[(fixed_colors_start + 3) % 4] = colors_pair[1]
   end
-
-
 end
