@@ -120,6 +120,8 @@ TODO
 - ✅ Implement initial palettes loading
 - ✅ Implement H-Blank handler for palettes
 - ✅ Fix image horizontal borders (scrollX) for each image
-- Fix colors for each image (especially frame 1)
+- Ensure colors are correct for each image (especially frame 1)
+- Time the animation properly
+- Add the extra animation frames
 - Move ANIMATION_SPEED_FACTOR out of the frames definitions
 - Split libraries into CoreImage, CoreGraphics, CoreAnimation
