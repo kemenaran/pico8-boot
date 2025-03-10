@@ -1,4 +1,4 @@
-InitialPalettesSet:
+Frame3InitialPalettes:
   dw $6318, $0000, $2B80, $7EA5
   dw $7EA5, $4DD0, $73BF, $0000
   dw $241F, $0000, $4DD0, $2B80
@@ -8,7 +8,7 @@ InitialPalettesSet:
   dw $7EA5, $0000, $179F, $2B80
   dw $7EA5, $179F, $4DD0, $0000
 
-PalettesDiffForScanline:
+Frame3PalettesDiffForScanline:
 ._0
   dw $2B80, $7EA5
   dw $7EA5, $4DD0

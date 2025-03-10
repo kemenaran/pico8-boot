@@ -1,4 +1,4 @@
-InitialPalettesSet:
+Frame4InitialPalettes:
   dw $5ED6, $0000, $2384, $7E64
   dw $7E64, $458D, $6FBF, $0000
   dw $1C1F, $0000, $458D, $2384
@@ -8,7 +8,7 @@ InitialPalettesSet:
   dw $7E64, $0000, $139F, $2384
   dw $7E64, $139F, $458D, $0000
 
-PalettesDiffForScanline:
+Frame4PalettesDiffForScanline:
 ._0
   dw $2384, $7E64
   dw $7E64, $458D

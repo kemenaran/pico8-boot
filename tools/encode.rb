@@ -30,6 +30,7 @@ logger.debug({options:, ARGV:})
 
 # 1. Open the source image
 filename = ARGV.first
+image_name = File.basename(filename, '.png')
 image = ChunkyPNG::Image.from_file(filename)
 
 # 2. Build the fixed part of the palettes.
@@ -101,13 +102,13 @@ if options[:output_palettes]
   MAGENTA = ChunkyPNG::Color.from_hex("#FF40FF")
   File.open(options[:output_palettes], "w") do |f|
     # Write the palettes set for line 0
-    f.puts("InitialPalettesSet:")
+    f.puts("Frame#{image_name}InitialPalettes:")
     palettes_sets_for_line[0].each do |initial_palette|
       f.puts("  dw #{initial_palette.dup(default_color: MAGENTA).map { |c| ChunkyPNG::Color.to_asm(c) }.join(", ") }")
     end
     # Write colors pairs to update on each scanline
     f.puts("")
-    f.puts("PalettesDiffForScanline:")
+    f.puts("Frame#{image_name}PalettesDiffForScanline:")
     palettes_sets_for_line.each.with_index do |palettes_set_for_scanline, line|
       f.puts "._#{line}"
       palettes_set_for_scanline.each do |palette|

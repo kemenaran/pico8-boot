@@ -87,7 +87,6 @@ LoadFrameData::
   call TableJump
   dw LoadFrameTileset
   dw LoadFrameTilemap
-  dw LoadFramePalette
   dw .done ; should never be reached
 
 .done
@@ -314,17 +313,40 @@ LoadFrameTilemap:
 .done
   ld hl, hFrameLoadingStage
   inc [hl]
-  ret
+  jp LoadFrameData.done
 
 ; Load the BG palette required for an animation frame into VRAM,
 ; then mark the frame as loaded.
 ;
+; The color palette isn't double-buffered: once the palette is loaded,
+; the frame needs to be presented immediately to avoid glitches.
+;
 ; Inputs:
 ;   hFrame  index of the frame to load
 LoadFramePalette:
-  ; TODO: load palette
+  ; de = frame struct address
+  ld hl, AnimationStruct
+  call GetRenderedFrameStruct
 
-.done
-  ld hl, hFrameLoadingStage
-  inc [hl]
-  jp LoadFrameData.done
+  ; hl = pointer to palettesAddress
+  ld h, d
+  ld l, e
+  ld bc, Frame0.palettesAddress - Frame0
+  add hl, bc
+
+  ; de = palettes sourde address
+  ld a, [hli]
+  ld e, a
+  ld a, [hli]
+  ld d, a
+
+  ; Switch the source ROM bank to the palettes bank
+  ld a, [hl]
+  ld [rROMB0], a
+
+  ; Copy the 8 BG palettes to VRAM
+  ld h, d
+  ld l, e
+  call CopyBGPalettes
+
+  ret

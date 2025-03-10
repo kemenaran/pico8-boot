@@ -15,70 +15,74 @@ AnimationStruct:
   dw Frame6
 
 Frame0:
-.duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw BlackTile
-.tilesetBank    db BANK(BlackTile)
-.tilesetCount   db (BlackTile.end - BlackTile) / 16
-.tilemapAddress dw Frame0Tilemap
-.tilemapBank    db BANK(Frame0Tilemap)
+.duration        db 3 * ANIMATION_SPEED_FACTOR
+.tilesetAddress  dw BlackTile
+.tilesetBank     db BANK(BlackTile)
+.tilesetCount    db (BlackTile.end - BlackTile) / 16
+.tilemapAddress  dw BlackTilemap
+.tilemapBank     db BANK(BlackTilemap)
+.palettesAddress dw BlackPalettes
+.palettesBank    db BANK(BlackPalettes)
 
 Frame1:
-.duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw Frame1Tiles
-.tilesetBank    db BANK(Frame1Tiles)
-.tilesetCount   db (Frame1Tiles.end - Frame1Tiles) / 16
-.tilemapAddress dw Frame1Tilemap
-.tilemapBank    db BANK(Frame1Tilemap)
+.duration        db 3 * ANIMATION_SPEED_FACTOR
+.tilesetAddress  dw Frame1Tiles
+.tilesetBank     db BANK(Frame1Tiles)
+.tilesetCount    db (Frame1Tiles.end - Frame1Tiles) / 16
+.tilemapAddress  dw Frame1Tilemap
+.tilemapBank     db BANK(Frame1Tilemap)
+.palettesAddress dw Frame1InitialPalettes
+.palettesBank    db BANK(Frame1InitialPalettes)
 
 Frame2:
-.duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw Frame2Tiles
-.tilesetBank    db BANK(Frame2Tiles)
-.tilesetCount   db (Frame2Tiles.end - Frame2Tiles) / 16
-.tilemapAddress dw Frame2Tilemap
-.tilemapBank    db BANK(Frame2Tilemap)
+.duration        db 3 * ANIMATION_SPEED_FACTOR
+.tilesetAddress  dw Frame2Tiles
+.tilesetBank     db BANK(Frame2Tiles)
+.tilesetCount    db (Frame2Tiles.end - Frame2Tiles) / 16
+.tilemapAddress  dw Frame2Tilemap
+.tilemapBank     db BANK(Frame2Tilemap)
+.palettesAddress dw Frame2InitialPalettes
+.palettesBank    db BANK(Frame2InitialPalettes)
 
 Frame3:
-.duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw Frame3Tiles
-.tilesetBank    db BANK(Frame3Tiles)
-.tilesetCount   db (Frame3Tiles.end - Frame3Tiles) / 16
-.tilemapAddress dw Frame3Tilemap
-.tilemapBank    db BANK(Frame3Tilemap)
+.duration        db 3 * ANIMATION_SPEED_FACTOR
+.tilesetAddress  dw Frame3Tiles
+.tilesetBank     db BANK(Frame3Tiles)
+.tilesetCount    db (Frame3Tiles.end - Frame3Tiles) / 16
+.tilemapAddress  dw Frame3Tilemap
+.tilemapBank     db BANK(Frame3Tilemap)
+.palettesAddress dw Frame3InitialPalettes
+.palettesBank    db BANK(Frame3InitialPalettes)
 
 Frame4:
-.duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw Frame4Tiles
-.tilesetBank    db BANK(Frame4Tiles)
-.tilesetCount   db (Frame4Tiles.end - Frame4Tiles) / 16
-.tilemapAddress dw Frame4Tilemap
-.tilemapBank    db BANK(Frame4Tilemap)
+.duration        db 3 * ANIMATION_SPEED_FACTOR
+.tilesetAddress  dw Frame4Tiles
+.tilesetBank     db BANK(Frame4Tiles)
+.tilesetCount    db (Frame4Tiles.end - Frame4Tiles) / 16
+.tilemapAddress  dw Frame4Tilemap
+.tilemapBank     db BANK(Frame4Tilemap)
+.palettesAddress dw Frame4InitialPalettes
+.palettesBank    db BANK(Frame4InitialPalettes)
 
 Frame5:
-.duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw Frame5Tiles
-.tilesetBank    db BANK(Frame5Tiles)
-.tilesetCount   db (Frame5Tiles.end - Frame5Tiles) / 16
-.tilemapAddress dw Frame5Tilemap
-.tilemapBank    db BANK(Frame5Tilemap)
+.duration        db 3 * ANIMATION_SPEED_FACTOR
+.tilesetAddress  dw Frame5Tiles
+.tilesetBank     db BANK(Frame5Tiles)
+.tilesetCount    db (Frame5Tiles.end - Frame5Tiles) / 16
+.tilemapAddress  dw Frame5Tilemap
+.tilemapBank     db BANK(Frame5Tilemap)
+.palettesAddress dw Frame5InitialPalettes
+.palettesBank    db BANK(Frame5InitialPalettes)
 
 Frame6:
-.duration       db 3 * ANIMATION_SPEED_FACTOR
-.tilesetAddress dw BlackTile
-.tilesetBank    db BANK(BlackTile)
-.tilesetCount   db (BlackTile.end - BlackTile) / 16
-.tilemapAddress dw BlackTilemap
-.tilemapBank    db BANK(BlackTilemap)
-
-Frame4InitialPalettes:
-  dw $5ED6, $0000, $2384, $7E64
-  dw $7E64, $458D, $6FBF, $0000
-  dw $1C1F, $0000, $458D, $2384
-  dw $458D, $7E64, $065F, $0000
-  dw $139F, $0000, $2384, $7E64
-  dw $139F, $7D1F, $2384, $0000
-  dw $7E64, $0000, $139F, $2384
-  dw $7E64, $139F, $458D, $0000
+.duration        db 3 * ANIMATION_SPEED_FACTOR
+.tilesetAddress  dw BlackTile
+.tilesetBank     db BANK(BlackTile)
+.tilesetCount    db (BlackTile.end - BlackTile) / 16
+.tilemapAddress  dw BlackTilemap
+.tilemapBank     db BANK(BlackTilemap)
+.palettesAddress dw BlackPalettes
+.palettesBank    db BANK(BlackPalettes)
 
 ; -------------------------------------------------------------------------------
 ; Tilemaps data
@@ -174,4 +178,17 @@ align 4
 Frame5Tiles:
   INCBIN "gfx/5.tileset.2bpp"
 .end
+
+; -------------------------------------------------------------------------------
+SECTION "Palettes - frame 0-3", ROMX, BANK[$03]
+
+INCLUDE "gfx/1.palettes.asm"
+INCLUDE "gfx/2.palettes.asm"
+INCLUDE "gfx/3.palettes.asm"
+
+; -------------------------------------------------------------------------------
+SECTION "Palettes - frame 4-6", ROMX, BANK[$04]
+
+INCLUDE "gfx/4.palettes.asm"
+INCLUDE "gfx/5.palettes.asm"
 

@@ -73,7 +73,7 @@ EntryPoint:
   call CopyAttrmap
 
   ; Load initial BG palettes
-  ld hl, Frame4InitialPalettes
+  ld hl, BlackPalettes
   call CopyBGPalettes
 
   ; Present the first frame
@@ -160,6 +160,8 @@ PresentFrameIfNeeded:
   jp c, .return ; skip presenting the frame if hFrameVICount > intended frame duration
 
 .presentFrame
+  ; The color palette isn't double-buffered: we need to load it right before presenting the frame.
+  call LoadFramePalette
   call AnimationFrameReady
 
 .return
