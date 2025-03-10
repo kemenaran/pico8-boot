@@ -59,7 +59,7 @@ STATInterrupt:
   ; Prepare the scroll register
   ; (Shift the image horizontally 4px more every 4th line)
   ldh a, [rLY]
-  sub IMAGE_FIRST_SCANLINE
+  sub IMAGE_FIRST_SCANLINE - 1
   and a, %11111100 ; clear the two lowest bits
   sub 8 * 2 ; width of two tiles, for left black margin
 

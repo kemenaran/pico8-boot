@@ -119,6 +119,7 @@ TODO
 - ✅ Scroll-compensate the source assets for all images
 - ✅ Implement initial palettes loading
 - ✅ Implement H-Blank handler for palettes
+- ✅ Fix image horizontal borders (scrollX) for each image
 - Fix colors for each image (especially frame 1)
 - Move ANIMATION_SPEED_FACTOR out of the frames definitions
 - Split libraries into CoreImage, CoreGraphics, CoreAnimation
