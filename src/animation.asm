@@ -74,6 +74,15 @@ GetFrameDuration::
   add hl, bc
   ld c, [hl]
 
+  ; c = c * ANIMATION_SPEED_FACTOR
+IF ANIMATION_SPEED_FACTOR > 1
+  xor a
+REPT ANIMATION_SPEED_FACTOR
+  add a, c
+ENDR
+  ld c, a
+ENDC
+
   pop hl
   ret
 

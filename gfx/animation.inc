@@ -19,7 +19,7 @@ AnimationStruct:
   dw Frame10
 
 Frame0:
-.duration         db 7 * ANIMATION_SPEED_FACTOR
+.duration         db 7
 .tilesetAddress   dw BlackTile
 .tilesetBank      db BANK(BlackTile)
 .tilesetCount     db (BlackTile.end - BlackTile) / 16
@@ -31,7 +31,7 @@ Frame0:
 .palettesDiffBank db 0
 
 Frame1:
-.duration         db 7 * ANIMATION_SPEED_FACTOR
+.duration         db 7
 .tilesetAddress   dw Frame1Tiles
 .tilesetBank      db BANK(Frame1Tiles)
 .tilesetCount     db (Frame1Tiles.end - Frame1Tiles) / 16
@@ -43,7 +43,7 @@ Frame1:
 .palettesDiffBank db BANK(Frame1PalettesDiffs)
 
 Frame2:
-.duration         db 5 * ANIMATION_SPEED_FACTOR
+.duration         db 5
 .tilesetAddress   dw Frame2Tiles
 .tilesetBank      db BANK(Frame2Tiles)
 .tilesetCount     db (Frame2Tiles.end - Frame2Tiles) / 16
@@ -55,7 +55,7 @@ Frame2:
 .palettesDiffBank db BANK(Frame2PalettesDiffs)
 
 Frame3:
-.duration         db 3 * ANIMATION_SPEED_FACTOR
+.duration         db 3
 .tilesetAddress   dw Frame3Tiles
 .tilesetBank      db BANK(Frame3Tiles)
 .tilesetCount     db (Frame3Tiles.end - Frame3Tiles) / 16
@@ -67,7 +67,7 @@ Frame3:
 .palettesDiffBank db BANK(Frame3PalettesDiffs)
 
 Frame4:
-.duration         db 5 * ANIMATION_SPEED_FACTOR
+.duration         db 5
 .tilesetAddress   dw Frame4Tiles
 .tilesetBank      db BANK(Frame4Tiles)
 .tilesetCount     db (Frame4Tiles.end - Frame4Tiles) / 16
@@ -79,7 +79,7 @@ Frame4:
 .palettesDiffBank db BANK(Frame4PalettesDiffs)
 
 Frame5:
-.duration         db 7 * ANIMATION_SPEED_FACTOR
+.duration         db 7
 .tilesetAddress   dw Frame5Tiles
 .tilesetBank      db BANK(Frame5Tiles)
 .tilesetCount     db (Frame5Tiles.end - Frame5Tiles) / 16
@@ -91,7 +91,7 @@ Frame5:
 .palettesDiffBank db BANK(Frame5PalettesDiffs)
 
 Frame6:
-.duration         db 30 * ANIMATION_SPEED_FACTOR
+.duration         db 30
 .tilesetAddress   dw BlackTile
 .tilesetBank      db BANK(BlackTile)
 .tilesetCount     db (BlackTile.end - BlackTile) / 16
@@ -103,7 +103,7 @@ Frame6:
 .palettesDiffBank db 0
 
 Frame7:
-.duration         db 9 * ANIMATION_SPEED_FACTOR
+.duration         db 9
 .tilesetAddress   dw Frame7Tiles
 .tilesetBank      db BANK(Frame7Tiles)
 .tilesetCount     db (Frame7Tiles.end - Frame7Tiles) / 16
@@ -115,7 +115,7 @@ Frame7:
 .palettesDiffBank db BANK(Frame7PalettesDiffs)
 
 Frame8:
-.duration         db 2 * ANIMATION_SPEED_FACTOR
+.duration         db 2
 .tilesetAddress   dw Frame8Tiles
 .tilesetBank      db BANK(Frame8Tiles)
 .tilesetCount     db (Frame8Tiles.end - Frame8Tiles) / 16
@@ -127,7 +127,7 @@ Frame8:
 .palettesDiffBank db BANK(Frame8PalettesDiffs)
 
 Frame9:
-.duration         db 9 * ANIMATION_SPEED_FACTOR
+.duration         db 9
 .tilesetAddress   dw Frame9Tiles
 .tilesetBank      db BANK(Frame9Tiles)
 .tilesetCount     db (Frame9Tiles.end - Frame9Tiles) / 16
@@ -139,7 +139,7 @@ Frame9:
 .palettesDiffBank db BANK(Frame9PalettesDiffs)
 
 Frame10:
-.duration         db 10 * ANIMATION_SPEED_FACTOR
+.duration         db 10
 .tilesetAddress   dw Frame10Tiles
 .tilesetBank      db BANK(Frame10Tiles)
 .tilesetCount     db (Frame10Tiles.end - Frame10Tiles) / 16
