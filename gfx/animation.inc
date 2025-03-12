@@ -4,7 +4,7 @@
 AnimationStruct:
 .struct
 .framesCount
-  db 7
+  db 11
 .frames
   dw Frame0
   dw Frame1
@@ -13,6 +13,10 @@ AnimationStruct:
   dw Frame4
   dw Frame5
   dw Frame6
+  dw Frame7
+  dw Frame8
+  dw Frame9
+  dw Frame10
 
 Frame0:
 .duration         db 7 * ANIMATION_SPEED_FACTOR
@@ -87,7 +91,7 @@ Frame5:
 .palettesDiffBank db BANK(Frame5PalettesDiffs)
 
 Frame6:
-.duration         db 1 * ANIMATION_SPEED_FACTOR
+.duration         db 30 * ANIMATION_SPEED_FACTOR
 .tilesetAddress   dw BlackTile
 .tilesetBank      db BANK(BlackTile)
 .tilesetCount     db (BlackTile.end - BlackTile) / 16
@@ -97,6 +101,54 @@ Frame6:
 .palettesBank     db BANK(BlackPalettes)
 .palettesDiff     dw $0000
 .palettesDiffBank db 0
+
+Frame7:
+.duration         db 9 * ANIMATION_SPEED_FACTOR
+.tilesetAddress   dw Frame7Tiles
+.tilesetBank      db BANK(Frame7Tiles)
+.tilesetCount     db (Frame7Tiles.end - Frame7Tiles) / 16
+.tilemapAddress   dw Frame7Tilemap
+.tilemapBank      db BANK(Frame7Tilemap)
+.palettesAddress  dw Frame7InitialPalettes
+.palettesBank     db BANK(Frame7InitialPalettes)
+.palettesDiff     dw Frame7PalettesDiffs
+.palettesDiffBank db BANK(Frame7PalettesDiffs)
+
+Frame8:
+.duration         db 2 * ANIMATION_SPEED_FACTOR
+.tilesetAddress   dw Frame8Tiles
+.tilesetBank      db BANK(Frame8Tiles)
+.tilesetCount     db (Frame8Tiles.end - Frame8Tiles) / 16
+.tilemapAddress   dw Frame8Tilemap
+.tilemapBank      db BANK(Frame8Tilemap)
+.palettesAddress  dw Frame8InitialPalettes
+.palettesBank     db BANK(Frame8InitialPalettes)
+.palettesDiff     dw Frame8PalettesDiffs
+.palettesDiffBank db BANK(Frame8PalettesDiffs)
+
+Frame9:
+.duration         db 9 * ANIMATION_SPEED_FACTOR
+.tilesetAddress   dw Frame9Tiles
+.tilesetBank      db BANK(Frame9Tiles)
+.tilesetCount     db (Frame9Tiles.end - Frame9Tiles) / 16
+.tilemapAddress   dw Frame9Tilemap
+.tilemapBank      db BANK(Frame9Tilemap)
+.palettesAddress  dw Frame9InitialPalettes
+.palettesBank     db BANK(Frame9InitialPalettes)
+.palettesDiff     dw Frame9PalettesDiffs
+.palettesDiffBank db BANK(Frame9PalettesDiffs)
+
+Frame10:
+.duration         db 10 * ANIMATION_SPEED_FACTOR
+.tilesetAddress   dw Frame10Tiles
+.tilesetBank      db BANK(Frame10Tiles)
+.tilesetCount     db (Frame10Tiles.end - Frame10Tiles) / 16
+.tilemapAddress   dw Frame10Tilemap
+.tilemapBank      db BANK(Frame10Tilemap)
+.palettesAddress  dw Frame10InitialPalettes
+.palettesBank     db BANK(Frame10InitialPalettes)
+.palettesDiff     dw Frame10PalettesDiffs
+.palettesDiffBank db BANK(Frame10PalettesDiffs)
 
 ; -------------------------------------------------------------------------------
 ; Tilemaps data
@@ -129,6 +181,26 @@ INCBIN "gfx/4.tilemap"
 ds align[4]
 Frame5Tilemap:
 INCBIN "gfx/5.tilemap"
+.end
+
+ds align[4]
+Frame7Tilemap:
+INCBIN "gfx/7.tilemap"
+.end
+
+ds align[4]
+Frame8Tilemap:
+INCBIN "gfx/8.tilemap"
+.end
+
+ds align[4]
+Frame9Tilemap:
+INCBIN "gfx/9.tilemap"
+.end
+
+ds align[4]
+Frame10Tilemap:
+INCBIN "gfx/10.tilemap"
 .end
 
 ; -------------------------------------------------------------------------------
@@ -193,6 +265,26 @@ Frame5Tiles:
   INCBIN "gfx/5.tileset.2bpp"
 .end
 
+align 4
+Frame7Tiles:
+  INCBIN "gfx/7.tileset.2bpp"
+.end
+
+align 4
+Frame8Tiles:
+  INCBIN "gfx/8.tileset.2bpp"
+.end
+
+align 4
+Frame9Tiles:
+  INCBIN "gfx/9.tileset.2bpp"
+.end
+
+align 4
+Frame10Tiles:
+  INCBIN "gfx/10.tileset.2bpp"
+.end
+
 ; -------------------------------------------------------------------------------
 SECTION "Palettes - frame 0-3", ROMX, BANK[$03]
 
@@ -201,8 +293,17 @@ INCLUDE "gfx/2.palettes.asm"
 INCLUDE "gfx/3.palettes.asm"
 
 ; -------------------------------------------------------------------------------
-SECTION "Palettes - frame 4-6", ROMX, BANK[$04]
+SECTION "Palettes - frame 4-5", ROMX, BANK[$04]
 
 INCLUDE "gfx/4.palettes.asm"
 INCLUDE "gfx/5.palettes.asm"
 
+; -------------------------------------------------------------------------------
+SECTION "Palettes - frame 7-8", ROMX, BANK[$05]
+INCLUDE "gfx/7.palettes.asm"
+INCLUDE "gfx/8.palettes.asm"
+
+; -------------------------------------------------------------------------------
+SECTION "Palettes - frame 9-10", ROMX, BANK[$06]
+INCLUDE "gfx/9.palettes.asm"
+INCLUDE "gfx/10.palettes.asm"
