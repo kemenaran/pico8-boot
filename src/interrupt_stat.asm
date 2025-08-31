@@ -65,7 +65,7 @@ STATInterrupt:
 
   ; Wait for HBlank (STAT mode 0)
   halt
-  ; no need for a nop, as we're pretty sure no enabled interrupt was serviced during the halt
+  nop ; interrupts are disabled: needs a nop instruction to avoid the `halt` bug
 
   ; Mode 0 - HBlank, VRAM accessible (102 GBC cycles without SCX/SCX and objects)
   ; ------------------------------------------------------
@@ -85,7 +85,7 @@ STATInterrupt:
   ld [hl], d        ; 2 cycles
 
   ; Macro: copy the next quadruplet of 4 colors to a specific location (34 cycles)
-MACRO copy_next_color_pair_to ; index
+MACRO copy_next_color_quadruplet_to ; index
   ; Update rBGPI to point to the correct color index
   dec l                       ; 1 cycle
   ld [hl], BGPIF_AUTOINC | \1 ; 3 cycles
@@ -107,12 +107,12 @@ ENDM
 
   ; Now copy the remaining 3 quadruplets
   ; (unrolling the loop with the macro)
-  copy_next_color_pair_to 20
-  copy_next_color_pair_to 36
+  copy_next_color_quadruplet_to 20
+  copy_next_color_quadruplet_to 36
 
   ; Mode 2 - OAM scan, VRAM accessible (20 GBC cycles)
   ; ------------------------------------------------------
-  copy_next_color_pair_to 52
+  copy_next_color_quadruplet_to 52
 
   ; Set the X scroll register (3 cycles)
   ; (This may execute one cycle after VRAM is locked - but we still can change rSCX)
