@@ -21,7 +21,7 @@ tools/encode.rb "original-gfx/shifted/${NAME}.png" --palette-fixed-colors-altern
 tools/pngmask.rb --palette-fixed-colors-alternated --repeat 2 "gfx/${NAME}.png" "gfx/${NAME}.masked.png"
 
 # Generate a 2bpp tileset and tilemap from the masked image
-rgbgfx "gfx/${NAME}.masked.png" --unique-tiles --tilemap "gfx/${NAME}.tilemap" --output "gfx/${NAME}.tileset.2bpp"
+rgbgfx "gfx/${NAME}.masked.png" --unique-tiles --colors '#ffffff,#acacac,#565656,#000000' --tilemap "gfx/${NAME}.tilemap" --output "gfx/${NAME}.tileset.2bpp"
 
 # Convert the 2bpp tileset to PNG (easier to work with)
 rgbgfx "gfx/${NAME}.tileset.png" --reverse 1 --output "gfx/${NAME}.tileset.2bpp" && rm "gfx/${NAME}.tileset.2bpp"

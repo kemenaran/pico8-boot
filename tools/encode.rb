@@ -79,7 +79,6 @@ end
 
 # 5. Output the grayscale 2bpp resulting image
 if options[:output_png]
-  # TODO: use a palette sorted in the reverse order (darkest to lightest), as on decode chunky png sorts them in this order anyway
   GRAYSCALE_PALETTE = Palette.new([255, 172, 86, 0].map(&ChunkyPNG::Color.method(:grayscale)))
   image_2bpp = ChunkyPNG::Image.new(image.width, image.height)
   Random.new(0) # for deterministic Array#sample
