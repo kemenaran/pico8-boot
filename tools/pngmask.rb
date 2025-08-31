@@ -73,4 +73,4 @@ image.rows.with_index.map do |row, y|
 end
 
 # 5. Save the output image
-image.save(output_filename)
+image.save(output_filename, { color_mode: ChunkyPNG::COLOR_INDEXED })

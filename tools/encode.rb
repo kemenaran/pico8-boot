@@ -77,9 +77,10 @@ palettes_sets_for_line = image.rows.map.with_index do |row, row_index|
   line_palettes_set
 end
 
-# 5. Output the 2bpp resulting image
+# 5. Output the grayscale 2bpp resulting image
 if options[:output_png]
-  PALETTE_2BPP = Palette.new([255, 172, 86, 0].map(&ChunkyPNG::Color.method(:grayscale)))
+  # TODO: use a palette sorted in the reverse order (darkest to lightest), as on decode chunky png sorts them in this order anyway
+  GRAYSCALE_PALETTE = Palette.new([255, 172, 86, 0].map(&ChunkyPNG::Color.method(:grayscale)))
   image_2bpp = ChunkyPNG::Image.new(image.width, image.height)
   Random.new(0) # for deterministic Array#sample
 
@@ -87,14 +88,14 @@ if options[:output_png]
     column = x / ChunkyPNG::Image::TILE_WIDTH
     column_palette = palettes_sets_for_line[y][column % COLUMNS_COUNT]
     indexed_pixel = begin
-      column_palette.transpose(pixel, into: PALETTE_2BPP)
+      column_palette.transpose(pixel, into: GRAYSCALE_PALETTE)
     rescue Palette::MissingColorError
       fallback_color = column_palette.variable_colors[column % 2] # pick the first or second variable color, but the same for all pixels of a column
-      column_palette.transpose(fallback_color, into: PALETTE_2BPP)
+      column_palette.transpose(fallback_color, into: GRAYSCALE_PALETTE)
     end
     image_2bpp.set_pixel(x, y, indexed_pixel)
   end
-  image_2bpp.save(options[:output_png], bit_depth: 2)
+  image_2bpp.save(options[:output_png], { color_mode: ChunkyPNG::COLOR_INDEXED })
 end
 
 # 6. Output the palettes for each line to an assembly text file
