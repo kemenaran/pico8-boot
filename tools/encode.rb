@@ -53,7 +53,7 @@ COLUMNS_COUNT.times do |i|
     .map { |tally| tally.first(2) }
     .to_h
     .keys    # extract colors from tally
-    .take(2) # 2 most frequent colors
+    .then { |sorted_colors| [sorted_colors[0], sorted_colors[1]] } # 2 most frequent colors (even if one of them is nil)
     .reverse # actual color first, black last
   initial_palettes_set[i] = Palette.new
     .tap { |palette| palette.fixed_colors_start = options[:palette_fixed_colors_alternated] ? (i % 2) * 2 : 0 } # Alternate between having the fixed colors pair at the beginning or at the end
