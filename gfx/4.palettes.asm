@@ -8,6 +8,7 @@ Frame4InitialPalettes:
   dw $7E64, $0000, $139F, $2384
   dw $7E64, $139F, $458D, $0000
 
+; Palettes diff for each scanline
 Frame4PalettesDiffs:
 ._0
   dw $2384, $7E64

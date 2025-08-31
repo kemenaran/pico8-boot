@@ -4,9 +4,9 @@ Frame7InitialPalettes:
   dw $73BF, $0000, $7D1F, $7D1F
   dw $7D1F, $7D1F, $73BF, $0000
   dw $73BF, $0000, $7D1F, $7D1F
-  dw $7D1F, $7D1F, $0000, $7D1F
-  dw $0000, $7D1F, $7D1F, $7D1F
-  dw $7D1F, $7D1F, $0000, $7D1F
+  dw $7D1F, $7D1F, $7D1F, $0000
+  dw $7D1F, $0000, $7D1F, $7D1F
+  dw $7D1F, $7D1F, $7D1F, $0000
 
 ; Palettes diff for each scanline
 Frame7PalettesDiffs:
