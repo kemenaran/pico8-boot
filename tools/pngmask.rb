@@ -10,9 +10,12 @@
 # |            |          |####       #|
 # |------------|          |------------|
 #
-#
 # The fill color is assumed to be the darkest of the palette (at index 3).
-# However, when using the `--palette-fixed-colors-alternated` option, the fill color will be alternatively the darkest (at index 3) and second-lightest color (at index 1).
+#
+# Options:
+#
+#   --palette-fixed-colors-alternated: on each new 8px column, switch the fill color between the darkest (at index 3)
+#       and second-lightest color (at index 1).
 #
 # Usage:
 #   tools/pngmask.rb [--repeat N] [--palette-fixed-colors-alternated] <input_filename.png> <output_filename.png>
@@ -32,7 +35,8 @@ input_filename = ARGV[0]
 output_filename = ARGV[1]
 
 # 1. Open the input image
-input_image = ChunkyPNG::Image.from_file(input_filename)
+input_ds = ChunkyPNG::Datastream.from_file(input_filename)
+input_image = ChunkyPNG::Image.from_datastream(input_ds)
 
 # 2. Repeat the image if needed
 repeat = options[:repeat]
@@ -45,7 +49,7 @@ end
 
 # 3. Compute the mask pattern
 TILE_WIDTH = 8
-palette_2bpp = input_image.palette.to_a.sort.reverse
+palette_2bpp = ChunkyPNG::Palette.from_chunks(input_ds.palette_chunk).to_a.reverse
 black_color = if options[:palette_fixed_colors_alternated]
   [
     palette_2bpp[1], # even columns
