@@ -92,13 +92,13 @@ Frame5:
 
 Frame6:
 .duration         db 30
-.tilesetAddress   dw BlackTile
-.tilesetBank      db BANK(BlackTile)
-.tilesetCount     db (BlackTile.end - BlackTile) / 16
-.tilemapAddress   dw BlackTilemap
-.tilemapBank      db BANK(BlackTilemap)
-.palettesAddress  dw BlackPalettes
-.palettesBank     db BANK(BlackPalettes)
+.tilesetAddress   dw Frame6Tiles
+.tilesetBank      db BANK(Frame6Tiles)
+.tilesetCount     db (Frame6Tiles.end - Frame6Tiles) / 16
+.tilemapAddress   dw Frame6Tilemap
+.tilemapBank      db BANK(Frame6Tilemap)
+.palettesAddress  dw Frame6InitialPalettes
+.palettesBank     db BANK(Frame6InitialPalettes)
 .palettesDiff     dw $0000
 .palettesDiffBank db 0
 
@@ -184,6 +184,11 @@ INCBIN "gfx/5.tilemap"
 .end
 
 ds align[4]
+Frame6Tilemap:
+INCBIN "gfx/6.tilemap"
+.end
+
+ds align[4]
 Frame7Tilemap:
 INCBIN "gfx/7.tilemap"
 .end
@@ -266,6 +271,11 @@ Frame5Tiles:
 .end
 
 align 4
+Frame6Tiles:
+  INCBIN "gfx/6.tileset.2bpp"
+.end
+
+align 4
 Frame7Tiles:
   INCBIN "gfx/7.tileset.2bpp"
 .end
@@ -293,10 +303,11 @@ INCLUDE "gfx/2.palettes.asm"
 INCLUDE "gfx/3.palettes.asm"
 
 ; -------------------------------------------------------------------------------
-SECTION "Palettes - frame 4-5", ROMX, BANK[$04]
+SECTION "Palettes - frame 4-6", ROMX, BANK[$04]
 
 INCLUDE "gfx/4.palettes.asm"
 INCLUDE "gfx/5.palettes.asm"
+INCLUDE "gfx/6.palettes.asm"
 
 ; -------------------------------------------------------------------------------
 SECTION "Palettes - frame 7-8", ROMX, BANK[$05]
