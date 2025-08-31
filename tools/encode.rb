@@ -95,6 +95,11 @@ if options[:output_png]
     end
     image_2bpp.set_pixel(x, y, indexed_pixel)
   end
+  # By default, ChunkyPNG::Image will compute the palette from the canvas pixels, excluding unused colors.
+  # Here we want all 4 grayscale colors to be present in the PNG palette (for compatibility with other tools in this project).
+  def image_2bpp.palette
+    ChunkyPNG::Palette.new(GRAYSCALE_PALETTE.colors)
+  end
   image_2bpp.save(options[:output_png], { color_mode: ChunkyPNG::COLOR_INDEXED })
 end
 
