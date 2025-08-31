@@ -10,12 +10,12 @@
 # |            |          |####       #|
 # |------------|          |------------|
 #
-# The fill color is assumed to be the darkest of the palette (at index 3).
+# The fill color is assumed to be the darkest of the palette (at index 0).
 #
 # Options:
 #
-#   --palette-fixed-colors-alternated: on each new 8px column, switch the fill color between the darkest (at index 3)
-#       and second-lightest color (at index 1).
+#   --repeat: Repeat the source image N times horizontaly before masking.
+#   --palette-fixed-colors-alternated: Consider that a palette's black color is at index 3 (instead of 1) every other column.
 #
 # Usage:
 #   tools/pngmask.rb [--repeat N] [--palette-fixed-colors-alternated] <input_filename.png> <output_filename.png>
@@ -50,20 +50,21 @@ end
 # 3. Compute the mask pattern
 TILE_WIDTH = 8
 palette_2bpp = ChunkyPNG::Palette.from_chunks(input_ds.palette_chunk).to_a.reverse
-black_color = if options[:palette_fixed_colors_alternated]
-  [
-    palette_2bpp[1], # even columns
-    palette_2bpp[3], # odd columns
-  ]
+black_colors = if options[:palette_fixed_colors_alternated]
+  {
+    even: palette_2bpp[1],
+    odd:  palette_2bpp[3],
+  }
 else
-  [
-    palette_2bpp[3], # even columns
-    palette_2bpp[3], # odd columns
-  ]
+  {
+    even: palette_2bpp[0],
+    odd:  palette_2bpp[0],
+  }
 end
 mask_pattern = Array.new(output_width) do |i|
   column_index = i / TILE_WIDTH
-  black_color[column_index % 2]
+  column_oddness = (column_index % 2).zero? ? :even : :odd
+  black_colors[column_oddness]
 end
 
 # 4. Mask the image
