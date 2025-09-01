@@ -1,8 +1,9 @@
-INCLUDE "src/hardware.inc"
-INCLUDE "src/pico8.inc"
-INCLUDE "src/constants.inc"
 INCLUDE "src/options.inc"
-INCLUDE "src/debug.inc"
+
+INCLUDE "src/include/hardware.inc"
+INCLUDE "src/include/pico8.inc"
+INCLUDE "src/include/constants.inc"
+INCLUDE "src/include/debug.inc"
 
 SECTION "VBlank interrupt", ROM0[INT_HANDLER_VBLANK]
   jp VBlankInterrupt
@@ -242,10 +243,10 @@ SwapBuffers:
 
 INCLUDE "src/interrupt_vblank.asm"
 INCLUDE "src/interrupt_stat.asm"
-INCLUDE "src/table_jump.asm"
-INCLUDE "src/memory.asm"
-INCLUDE "src/gfx.asm"
-INCLUDE "src/animation.asm"
+INCLUDE "src/lib/table_jump.asm"
+INCLUDE "src/lib/memory.asm"
+INCLUDE "src/lib/gfx.asm"
+INCLUDE "src/lib/animation.asm"
 INCLUDE "gfx/animation.inc"
 
 ; -------------------------------------------------------------------------------
