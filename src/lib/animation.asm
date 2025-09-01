@@ -4,6 +4,16 @@
 ; Requires: 'table_jump.asm', 'gfx.asm'
 ; ---------------------------------------------------------------------------------
 
+; Reset the animation variables to zero.
+ResetAnimation::
+  xor a
+  ldh [hFrame], a
+  ldh [hFrameLoadingStage], a
+  ldh [hTilesetOffset + 0], a
+  ldh [hTilesetOffset + 1], a
+  ldh [hFrameLoaded], a
+  ret
+
 ; Inputs:
 ;   hl  address of the animation struct
 ; Returns:

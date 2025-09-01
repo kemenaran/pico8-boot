@@ -80,6 +80,5 @@ Future work:
 - Curbe-adjust the colors, to match a real GBC screen
 - Let the linker auto-organize the code into sections (instead of specifying them manually)
 - Test on other emulators
-- Restart the animation when pressing a button
 - Slow-animation mode
 - Frame-by-frame mode

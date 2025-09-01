@@ -106,6 +106,20 @@ MainLoop:
   cp 144
   jr c, .ensureVBlank
 
+  ; Did we reach the last animation frame?
+  ld hl, AnimationStruct
+  call GetAnimationFramesCount
+  ldh a, [hFrame]
+  cp a, c
+  jp nz, .animating
+.animationDone
+  ; Reading joypad keys is slighly slow, and the CPU time during the animation is relatively tight.
+  ; For now, process keys only once the animation has ended.
+  call HandleInputs
+  jp .done
+.animationDoneEnd
+
+.animating
   ; If there are still frame data to load, do it.
   call LoadFrameDataIfNeeded
 
@@ -115,8 +129,37 @@ MainLoop:
 
   call SwapBuffersIfReady
 
+.done
   ; Loop
   jr MainLoop
+
+; Process pressed joypad keys.
+;
+; The available keys are:
+; - pressing any button once the animation ended: restart the animation
+HandleInputs:
+IF DEBUG >= 0
+  ld hl, AnimationStruct
+  call GetAnimationFramesCount
+  ldh a, [hFrame]
+  cp a, c
+  D_ASSERT_Z "Reading inputs should only be executed once the animation ended"
+ENDC
+
+  ; Update pressed keys state
+  call UpdateKeys
+
+  ; If any key is pressed…
+  ld a, [wCurKeys]
+  and a
+  jp z, .anyKeyEnd
+  ; …restart the animation.
+  ld hl, BlackPalettes
+  call CopyBGPalettes
+  call ResetAnimation
+.anyKeyEnd
+
+  ret
 
 ; Execute a data-loading step during each VBlank.
 ;
@@ -125,13 +168,6 @@ MainLoop:
 ;
 ; This function must not execute longer than the VBlank duration.
 LoadFrameDataIfNeeded:
-  ; If we reached the last animation frame, return early.
-  ld hl, AnimationStruct
-  call GetAnimationFramesCount
-  ldh a, [hFrame]
-  cp a, c
-  jp z, .return
-
   ; If there are still data to load for this frame, execute the next loading stage.
   ldh a, [hFrameLoaded]
   and a
