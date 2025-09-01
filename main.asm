@@ -247,6 +247,7 @@ INCLUDE "src/lib/table_jump.asm"
 INCLUDE "src/lib/memory.asm"
 INCLUDE "src/lib/gfx.asm"
 INCLUDE "src/lib/animation.asm"
+INCLUDE "src/lib/joypad.asm"
 INCLUDE "gfx/animation.inc"
 
 ; -------------------------------------------------------------------------------
@@ -258,6 +259,16 @@ wStack::
 
 ; Init puts the SP here
 DEF wStackTop EQU $CFFF
+
+; -------------------------------------------------------------------------------
+SECTION "Input Variables", WRAM0
+
+; Joypad keys currently pressed (see UpdateKeys)
+wCurKeys: db
+
+; Joypad keys that were newly pressed (see UpdateKeys)
+wNewKeys: db
+
 
 ; -------------------------------------------------------------------------------
 SECTION "HRAM", HRAM[$FF80]
