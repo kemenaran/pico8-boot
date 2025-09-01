@@ -11,8 +11,6 @@
 ;
 ; The palettes copy uses a popslide to copy 4 colors quadruplets (16 colors).
 STATInterrupt:
-  D_LOG "STATInterrupt"
-
   ; Mode 2 (OAM scan), Mode 3 (Drawing) and Mode 0 (HBlank) of the scanline before the start:
   ; Use it to prepare the main loop.
   ; ------------------------------------------------------
