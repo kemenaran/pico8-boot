@@ -70,60 +70,16 @@ Changing palettes mid-scanline demos:
 https://github.com/EmmaEwert/gameboy
 https://noncircadian.tumblr.com/post/162989007715/2-bits-per-pixel
 
-TODO
-====
+Status
+======
 
-- ✅ Display the first frame in DMG mode
-- ✅ Implement double-buffering
-- ✅ Switch to DMG-on-GBC (but with double speed)
-- ✅ Why aren't the second frame tiles written to VRAM bank 1? (Because we're not in CGB compatible mode!)
-- ✅ Convert the ROM to GBC
-- ✅ Split loading into several stages (it seems 224 tiles can be loaded per vblank max)
-- ✅ DMA tiles and tilemap
-  - ✅ Align tilesets to $10 boundaries
-  - ✅ Optimize tilemap load to fit a VBlank period
-  - ✅ DMA only the allowed size (split large tilesets in two)
-  - ✅ Rewrite tileset datastructures as structs (instead of several arrays)
-- ✅ First frame is black
-- ✅ Diplay all frames in non-colored mode
-- ✅ Add basic colors
-- ✅ Fix order of data loading and buffer swap (to avoid a flash of colors)
-- Color-correct the pico8 colors
-- ✅ Write a script to output color statistics about an image: color count per picture/per tile/per 8x2 bloc
-- ✅ Write a script to rotate the image by 1px every line, and see if the stats are better
-- ✅ Code a demo to see how many colors can be updated every scanline
-- ✅ Write a script to output a new image with reduced colors and/or tiles that can be displayed by the GBC
-- ✅ Implement the pico8 pattern of shifting
-- ✅ Write an easy-to-use toolchain to convert images
-- ✅ Fix bug where the colors start to be off after one frame
-- ✅ Investigate why colors start to be off after a certain scanline:
-  It's because as we shift x position prgressively, we start rendering more of the mirrored tileset (instead of the original). And the duplicated tileset uses whatever color is in the palette (which may even be magenta).
-- ✅ Can we fix the encoder to encode colors for all 16 columns (instead of 8 mirrored)?
-  - ✅ Yes, with a best effort (if the palette is already full, we pick a random existing color)
-- ✅ Why are some colors incorrect?
-  - ✅ Because sometimes a cycle is missing to copy the last color byte of BG7
-  - Possible solutions:
-    1. Find an extra cycle of optimization (nope)
-    2. ✅ Copy colors in 4-colors chunks (instead of 2) [It makes debugging colors harder though]
-    3. Hardcode the colors slide (difficult)
-- ✅ Refactor the main code into a state machine, that dynamically chunks the transferts if needed
-- ✅ Bug: why is frame 2 tileset copied to the front buffer (instead of the back)?
-- ✅ Fix BG attrmap for BG buffer 1 (it should present tiles of bank 1, and not bank 0)
-- ✅ Understand why the frame duration is not honored
-- ✅ Chunk tile transferts
-- ✅ Debug chunked tile transferts
-- ✅ Implement all animations frames
-- ✅ Implement H-Blank handler for scrollX animation
-- ✅ Implement DMA transfer for tilemaps
-- ✅ Make the default pico8 palette loaded closer to the dynamic palette
-- ✅ Scroll-compensate the source assets for all images
-- ✅ Implement initial palettes loading
-- ✅ Implement H-Blank handler for palettes
-- ✅ Fix image horizontal borders (scrollX) for each image
-- ✅ Time the animation properly
-- ✅ Add the extra animation frames
-- ✅ Move ANIMATION_SPEED_FACTOR out of the frames definitions
-- Fix the colors of the extra frames
-- Ensure colors are correct for each image (especially frame 1)
-- Curse-adjust colors
-- Split libraries into CoreImage, CoreGraphics, CoreAnimation
+The demo is implemented and works (tested using the BGB emulator).
+
+Future work:
+
+- Curbe-adjust the colors, to match a real GBC screen
+- Let the linker auto-organize the code into sections (instead of specifying them manually)
+- Test on other emulators
+- Restart the animation when pressing a button
+- Slow-animation mode
+- Frame-by-frame mode
