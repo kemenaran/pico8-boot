@@ -5,6 +5,8 @@ MACRO D_LOG
 ENDM
 MACRO D_BREAK
 ENDM
+MACRO D_ASSERT_Z
+ENDM
 
 ELSE ; DEBUG > 0
 
@@ -22,6 +24,15 @@ ENDM
 ; Set a source breakpoint for the no$gmb / bgb debugger.
 MACRO D_BREAK
   ld b, b
+ENDM
+
+; Log a message and set a breakpoint if the zero flag is not set.
+; Accepts a string as an input.
+MACRO D_ASSERT_Z
+  jr z, :++
+  D_LOG STRCAT("Assert not met: ", \1)
+  D_BREAK
+:
 ENDM
 
 ENDC
