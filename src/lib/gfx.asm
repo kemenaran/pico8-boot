@@ -54,6 +54,7 @@ CopyTileset:
   ld a, [hl]
   sub 1 ; DMA transfers N+1 tiles
   ld [rHDMA5], a ; transfer starts
+.dmaEnd
   ret
 
 .noDMA
@@ -87,7 +88,13 @@ CopyTileset:
   pop hl ; restore source address to hl
   jp CopyData
 
-; Copy a tilemap of c rows from de to hl (a rectangular region of VRAM)
+; Copy a rectangular tilemap to VRAM, from a tilemap definition in hl.
+;
+; The definition data format is:
+;   dw <source_address>
+;   db <source_bank>
+;   dw <dest_address>
+;   db <rows_count>
 ;
 ; DMA can be used if and only if:
 ; - the tilemap is exactly 32 tiles wide,
@@ -101,6 +108,28 @@ IF TILEMAP_WIDTH == 32
   jp nz, .dma
   ; fallthrough: use loop version
 ENDC
+
+.noDMA
+  ; Copy tilemap definition to registers
+  ; source
+  ld a, [hli]
+  ld c, a
+  ld a, [hli]
+  ld b, a
+  push bc ; push on stack; we'll pop it back to hl before copying
+  ; source bank
+  ld a, [hli]
+  ld [rROMB0], a
+  ; de = destination
+  ld a, [hli]
+  ld e, a
+  ld a, [hli]
+  ld d, a
+  ; c = rows count
+  ld a, [hl]
+  ld c, a
+  ; restore source address to hl
+  pop hl
 
 .loop
   ; Unroll the loop: copy a row in a single pass
@@ -120,24 +149,27 @@ ENDR
   ret
 
 .dma
-  ; Copy tileset definition to DMA registers
-  ; Source (high)
-  ld a, d
-  ld [rHDMA1], a
+  ; Copy tilemap definition to DMA registers
   ; Source (low)
-  ld a, e
+  ld a, [hli]
   ld [rHDMA2], a
+  ; Source (high)
+  ld a, [hli]
+  ld [rHDMA1], a
+  ; Source bank
+  ld a, [hli]
+  ld [rROMB0], a
+  ; Dest (low)
+  ld a, [hli]
+  ld [rHDMA4], a
   ; Dest (high)
   ; (Mask the higher bit of the destination, because DMA destination is an offset relative to $8000)
-  ld a, h
+  ld a, [hli]
   and a, %01111111
   ld [rHDMA3], a
-  ; Dest (low)
-  ld a, l
-  ld [rHDMA4], a
   ; length, as 16-bytes chunks count
   ; (32 bytes per tilemap row, so bytes = rowsCount * 2)
-  ld a, c
+  ld a, [hl]
   add a, a ; a * 2
   sub 1 ; DMA transfers N+1 chunks
   ld [rHDMA5], a ; transfer starts

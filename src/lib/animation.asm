@@ -9,6 +9,10 @@ ResetAnimation::
   xor a
   ldh [hFrame], a
   ldh [hFrameLoadingStage], a
+  ldh [hTilesetCopyCommand.sourceAddr + 0], a
+  ldh [hTilesetCopyCommand.sourceAddr + 1], a
+  ldh [hTilemapCopyCommand.sourceAddr + 0], a
+  ldh [hTilemapCopyCommand.sourceAddr + 1], a
   ldh [hTilesetOffset + 0], a
   ldh [hTilesetOffset + 1], a
   ldh [hFrameLoaded], a
@@ -128,22 +132,30 @@ GetFramePalettesDiff::
   pop de
   ret
 
+; Inputs:
+;   hl  address of the animation struct
+; Returns:
+;   bc  number of animation frames remaining
+;   z   set if the animation reached the last frame
+GetRemainingFramesCount::
+  call GetAnimationFramesCount
+  ldh a, [hFrame]
+  sub a, c
+  ret
+
 ; Load the graphical resources required for an animation frame, in several stages.
 ;
 ; Inputs:
 ;   hFrame             index of the frame to load
 ;   hFrameLoadingStage frame loading stage
-LoadFrameData::
+PrepareFrameData::
+  ; TODO: optimize (no need for a full jump table here)
   ldh a, [hFrameLoadingStage]
   call TableJump
-  dw LoadFrameTileset
-  dw LoadFrameTilemap
-  dw .done ; should never be reached
-
+._00 dw PrepareFrameTileset
+._01 dw PrepareFrameTilemap
+._02 dw .done
 .done
-  ; Mark the frame as loaded
-  ld a, 1
-  ldh [hFrameLoaded], a
   ret
 
 ; Load the tileset required for an animation frame into VRAM
@@ -154,7 +166,7 @@ LoadFrameData::
 ; Inputs:
 ;   hFrame              index of the frame to load
 ;   hTilesetOffset      offset of the tileset chunk to load
-LoadFrameTileset:
+PrepareFrameTileset:
   ; de = frame struct address
   ld hl, AnimationStruct
   call GetRenderedFrameStruct
@@ -236,17 +248,8 @@ DEF OFFSET_PER_CHUNK = BYTES_PER_TILE * TILES_PER_CHUNK
 .setTilesCount
   ldh [hTilesetCopyCommand + 5], a
 
-  ; Switch to back-buffer VRAM bank
-  ld a, [hTilesDataBankBack]
-  ld [rVBK], a
-
-  ; Copy the tileset chunk
-  ld hl, hTilesetCopyCommand
-  call CopyTileset
-
-  ; Restore front-buffer VRAM bank
-  ld a, [hTilesDataBankFront]
-  ld [rVBK], a
+.commandReady
+  ; The copy command is now prepared to be executed during the next vblank.
 
   ; If the tileset is smaller than a single chunk, we're done.
   pop bc ; pop tilesetCount from the stack
@@ -278,9 +281,6 @@ DEF OFFSET_PER_CHUNK = BYTES_PER_TILE * TILES_PER_CHUNK
   jr .return
 
 .tilesetDone
-  ; Load a single black tile at the end of the tileset
-  call LoadReferenceBlackTile
-
   ; Cleanup and move to the next stage
   xor a
   ldh [hTilesetOffset + 0], a
@@ -289,6 +289,116 @@ DEF OFFSET_PER_CHUNK = BYTES_PER_TILE * TILES_PER_CHUNK
   inc [hl]
 
 .return
+  ret
+
+; Load the tilemap required for an animation frame into VRAM.
+;
+; Caveats:
+;  - The tilemap is assumed to always be the same size (TILEMAP_WIDTH * TILEMAP_HEIGHT)
+;
+; Inputs:
+;   hFrame  index of the frame to load
+PrepareFrameTilemap:
+  ; de = frame struct address
+  ld hl, AnimationStruct
+  call GetRenderedFrameStruct
+
+  ;
+  ; Fill hTilemapCopyCommand with the proper parameters
+  ;
+
+  ; source address
+  ld h, d
+  ld l, e
+  ld bc, Frame0.tilemapAddress - Frame0
+  add hl, bc
+  ld a, [hli]
+  ldh [hTilemapCopyCommand.sourceAddr + 0], a
+  ld a, [hli]
+  ldh [hTilemapCopyCommand.sourceAddr + 1], a
+
+  ; source bank
+  ld a, [hli]
+  ldh [hTilemapCopyCommand.sourceBank], a
+
+  ; destination
+  ld a, TILEMAP_TOP * 32 + TILEMAP_LEFT
+  ldh [hTilemapCopyCommand.destAddr + 0], a
+  ld a, [hBGMapAddressBack]
+  ldh [hTilemapCopyCommand.destAddr + 1], a
+
+  ; rows count
+  ld a, TILEMAP_HEIGHT
+  ldh [hTilemapCopyCommand.rowsCount], a
+
+.commandReady
+  ; The copy command is now prepared to be executed during the next vblank.
+
+  ; Move to the next stage
+  ld hl, hFrameLoadingStage
+  inc [hl]
+
+  ret
+
+CopyFrameData::
+  ; If hTilesetCopyCommand.sourceAddr has a non-zero value, copy the tileset
+  ld hl, hTilesetCopyCommand.sourceAddr
+  ld a, [hli]
+  or a, [hl]
+  jr nz, ExecuteTilesetCopyCommand
+
+  ; Else if hTilemapCopyCommand.sourceAddr has a non-zero value, copy the tilemap
+  ld hl, hTilemapCopyCommand.sourceAddr
+  ld a, [hli]
+  or a, [hl]
+  jr nz, ExecuteTilemapCopyCommand
+
+  ; Nothing to copy: mark the frame as loaded
+  ld a, 1
+  ldh [hFrameLoaded], a
+  ret
+
+ExecuteTilesetCopyCommand:
+  ; Switch to back-buffer VRAM bank
+  ld a, [hTilesDataBankBack]
+  ld [rVBK], a
+
+  ; Copy the tileset chunk
+  ld hl, hTilesetCopyCommand
+  call CopyTileset
+
+  ; Restore front-buffer VRAM bank
+  ld a, [hTilesDataBankFront]
+  ld [rVBK], a
+
+  ; Mark the tileset as loaded
+  xor a
+  ldh [hTilesetCopyCommand.sourceAddr + 0], a
+  ldh [hTilesetCopyCommand.sourceAddr + 1], a
+
+  ret
+
+ExecuteTilemapCopyCommand:
+  ; Extra: load a single black tile at the end of the tileset
+  call LoadReferenceBlackTile
+
+  ; Switch the destination VRAM bank to the tilemap data bank (bank 0)
+  xor a
+  ld [rVBK], a
+
+  ; Execute the copy command
+  ld hl, hTilemapCopyCommand
+  call CopyTilemap
+
+  ; Restore the VRAM bank
+  ld a, [hTilesDataBankFront]
+  ld [rVBK], a
+
+  ; Mark the tilemap as loaded
+  xor a
+  ldh [hTilemapCopyCommand.sourceAddr + 0], a
+  ldh [hTilemapCopyCommand.sourceAddr + 1], a
+
   ret
 
 ; Load a single black tile at the end of the tileset (index $FF)
@@ -313,58 +423,6 @@ LoadReferenceBlackTile:
   pop af
   ld [rROMB0], a
   ret
-
-; Load the tilemap required for an animation frame into VRAM.
-;
-; Caveats:
-;  - The tilemap is assumed to always be the same size (TILEMAP_WIDTH * TILEMAP_HEIGHT)
-;
-; Inputs:
-;   hFrame  index of the frame to load
-LoadFrameTilemap:
-  ; de = frame struct address
-  ld hl, AnimationStruct
-  call GetRenderedFrameStruct
-
-  ld h, d
-  ld l, e
-  ld bc, Frame0.tilemapAddress - Frame0
-  add hl, bc
-
-  ; de = source address
-  ld a, [hli]
-  ld e, a
-  ld a, [hli]
-  ld d, a
-
-  ; Switch the source ROM bank to the tilemap data bank
-  ld a, [hl]
-  ld [rROMB0], a
-
-  ; bc = rows count
-  ld b, 0
-  ld c, TILEMAP_HEIGHT
-
-  ; hl = destination
-  ld a, [hBGMapAddressBack]
-  ld h, a
-  ld l, TILEMAP_TOP * 32 + TILEMAP_LEFT
-
-  ; Switch the destination VRAM bank to the tilemap data bank (bank 0)
-  xor a
-  ld [rVBK], a
-
-  ; Copy
-  call CopyTilemap
-
-  ; Restore the VRAM bank
-  ld a, [hTilesDataBankFront]
-  ld [rVBK], a
-
-.done
-  ld hl, hFrameLoadingStage
-  inc [hl]
-  jp LoadFrameData.done
 
 ; Load the BG palette required for an animation frame into VRAM,
 ; then mark the frame as loaded.

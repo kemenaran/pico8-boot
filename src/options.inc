@@ -1,2 +1,2 @@
-DEF DEBUG                  EQU 1
+DEF DEBUG                  EQU 0
 DEF ANIMATION_SPEED_FACTOR EQU 1

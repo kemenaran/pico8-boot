@@ -12,11 +12,11 @@ SECTION "STAT Interrupt", ROM0[INT_HANDLER_STAT]
   jp STATInterrupt
 
 SECTION "Header", ROM0[$100]
-  jp EntryPoint
+  jp Init
 
 ds $150 - @, 0 ; Make room for the header
 
-EntryPoint:
+Init:
   ; Shut down audio circuitry
   ld a, 0
   ld [rNR52], a
@@ -97,39 +97,32 @@ EntryPoint:
   jp MainLoop
 
 MainLoop:
+  call HandleInputs
+
+  ; If we reached the final frame of the animation, nothing to do.
+  ld hl, AnimationStruct
+  call GetRemainingFramesCount
+  jr z, .waitForVBlank
+
+  ; If the frame is already loaded (and just waiting for display), nothing to do.
+  ldh a, [hFrameLoaded]
+  and a
+  jp nz, .waitForVBlank
+
+  ; Prepare a copy command to be executed during the next vblank interval.
+  call PrepareFrameData
+
+.waitForVBlank
   ; Stop the CPU until the next interrupt
   halt
   nop
-  ; Ensure we actually reached v-blank
-.ensureVBlank
-  ld a, [rLY]
-  cp 144
-  jr c, .ensureVBlank
+  ; Ensure we actually reached vblank
+  ldh a, [hVBlankInterruptServiced]
+  and a
+  jr z, .waitForVBlank
+  xor a
+  ldh [hVBlankInterruptServiced], a
 
-  ; Did we reach the last animation frame?
-  ld hl, AnimationStruct
-  call GetAnimationFramesCount
-  ldh a, [hFrame]
-  cp a, c
-  jp nz, .animating
-.animationDone
-  ; Reading joypad keys is slighly slow, and the CPU time during the animation is relatively tight.
-  ; For now, process keys only once the animation has ended.
-  call HandleInputs
-  jp .done
-.animationDoneEnd
-
-.animating
-  ; If there are still frame data to load, do it.
-  call LoadFrameDataIfNeeded
-
-  ; If a new frame is ready, present it.
-  ; (And otherwise, the previous frame remains displayed.)
-  call PresentFrameIfNeeded
-
-  call SwapBuffersIfReady
-
-.done
   ; Loop
   jr MainLoop
 
@@ -152,129 +145,13 @@ ENDC
   ; If any key is pressed…
   ld a, [wCurKeys]
   and a
-  jp z, .anyKeyEnd
+  jr z, .anyKeyEnd
   ; …restart the animation.
   ld hl, BlackPalettes
   call CopyBGPalettes
   call ResetAnimation
 .anyKeyEnd
 
-  ret
-
-; Execute a data-loading step during each VBlank.
-;
-; The data-loading step may result in a new frame being ready to be presented,
-; or require additional loading steps during the next VBlank.
-;
-; This function must not execute longer than the VBlank duration.
-LoadFrameDataIfNeeded:
-  ; If there are still data to load for this frame, execute the next loading stage.
-  ldh a, [hFrameLoaded]
-  and a
-  jp z, LoadFrameData
-
-.return
-  ret
-
-PresentFrameIfNeeded:
-  ; If the next frame is still loading, we can't present it yet
-  ldh a, [hFrameLoaded]
-  and a
-  jp z, .return
-
-  ; If no frame has been presented yet, immediately present the first one
-  ldh a, [hFrame]
-  and a
-  jp z, .presentFrame
-
-  ; If the presented frame duration is larger than the intended duration,
-  ; time to present the next frame.
-  ld hl, AnimationStruct
-  call GetPresentedFrameStruct
-  call GetFrameDuration ; c = intended duration of the presented frame
-  ldh a, [hFrameVICount]
-  cp a, c
-  jp c, .return ; skip presenting the frame if hFrameVICount > intended frame duration
-
-.presentFrame
-  ; The color palette isn't double-buffered: we need to load it right before presenting the frame.
-  call LoadFramePalette
-  call AnimationFrameReady
-
-.return
-  ret
-
-AnimationFrameReady:
-  ; Mark the frame as ready for presentation
-  ld a, 1
-  ld [hNeedsPresentingFrame], a
-  ret
-
-IncrementAnimationFrame:
-  ; Increment the animation frame index
-  ld hl, hFrame
-  inc [hl]
-  ; Reset the loading state
-  xor a
-  ld [hFrameLoaded], a
-  ld [hFrameLoadingStage], a
-  ret
-
-SwapBuffersIfReady:
-  ; If no new frame is ready, present the same buffer
-  ld a, [hNeedsPresentingFrame]
-  and a
-  ret z
-
-  ; Swap buffers
-  xor a
-  ldh [hNeedsPresentingFrame], a
-  ldh [hFrameVICount], a
-  call IncrementAnimationFrame
-  ; fallthrough
-
-; Swap the front buffer and the back buffer (tile data and BG map)
-SwapBuffers:
-  ld a, [hTilesDataBankFront]
-  and a
-  jp z, .presentBufferB
-
-.presentBufferA
-  ; Tiles data are presented from VRAM bank 0
-  D_LOG "Swapping buffers (front: bank 0; back: bank 1)"
-  xor a
-  ld [hTilesDataBankFront], a
-  ld a, 1
-  ld [hTilesDataBankBack], a
-  ; Switch to front VRAM bank
-  ld [rVBK], a
-  ; BG map is presented from $9800
-  ld a, HIGH(_SCRN0)
-  ld [hBGMapAddressFront], a
-  ld a, HIGH(_SCRN1)
-  ld [hBGMapAddressBack], a
-  ; Switch BG map
-  ld hl, rLCDC
-  res LCDCB_BG9C00, [hl]
-  ret
-
-.presentBufferB
-  ; Tiles data are presented from VRAM bank 1
-  D_LOG "Swapping buffers (front: bank 1; back: bank 0)"
-  ld a, 1
-  ld [hTilesDataBankFront], a
-  xor a
-  ld [hTilesDataBankBack], a
-  ; Switch to front VRAM bank
-  ld [rVBK], a
-  ; BG map is presented from $9C00
-  ld a, HIGH(_SCRN1)
-  ld [hBGMapAddressFront], a
-  ld a, HIGH(_SCRN0)
-  ld [hBGMapAddressBack], a
-  ; Switch BG map
-  ld hl, rLCDC
-  set LCDCB_BG9C00, [hl]
   ret
 
 INCLUDE "src/interrupt_vblank.asm"
@@ -309,6 +186,9 @@ wNewKeys: db
 ; -------------------------------------------------------------------------------
 SECTION "HRAM", HRAM[$FF80]
 
+; Whether the V-Blank interrupt has been executed during this iteration of the main loop
+hVBlankInterruptServiced: db
+
 ; Total number of vertical interrupts that occured since the beginning
 hVICount: db
 
@@ -331,6 +211,13 @@ hTilesetCopyCommand:
 .sourceBank db
 .destAddr   dw
 .tilesCount db
+
+; Scratchpad structure used by CopyTilemap
+hTilemapCopyCommand:
+.sourceAddr dw
+.sourceBank db
+.destAddr   dw
+.rowsCount  db
 
 ; Whether the next frame resources are loaded
 hFrameLoaded: db
