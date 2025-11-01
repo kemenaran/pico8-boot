@@ -106,6 +106,9 @@ end
 if options[:output_palettes]
   MAGENTA = ChunkyPNG::Color.from_hex("#FF40FF")
   File.open(options[:output_palettes], "w") do |f|
+    # Write the section header
+    f.puts("SECTION \"#{File.basename(f.path)}\", ROMX")
+    f.puts("")
     # Write the palettes set for line 0
     f.puts("Frame#{image_name}InitialPalettes:")
     palettes_sets_for_line[0].each do |initial_palette|

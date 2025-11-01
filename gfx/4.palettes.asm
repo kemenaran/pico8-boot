@@ -1,3 +1,5 @@
+SECTION "4.palettes.asm", ROMX
+
 Frame4InitialPalettes:
   dw $5ED6, $0000, $2384, $7E64
   dw $7E64, $458D, $6FBF, $0000

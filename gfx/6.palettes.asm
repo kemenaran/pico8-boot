@@ -1,3 +1,5 @@
+SECTION "6.palettes.asm", ROMX
+
 Frame6InitialPalettes:
   dw $7D1F, $0000, $7D1F, $7D1F
   dw $7D1F, $7D1F, $7D1F, $0000

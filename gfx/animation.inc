@@ -1,6 +1,8 @@
 ; -------------------------------------------------------------------------------
 ; Animated picture definition
 
+SECTION "Animation definitions", ROM0
+
 AnimationStruct:
 .struct
 .framesCount
@@ -153,6 +155,9 @@ Frame10:
 ; -------------------------------------------------------------------------------
 ; Tilemaps data
 
+; TODO: allow tilemaps outside of bank 1
+SECTION "Tilemaps", ROMX, BANK[$01]
+
 ds align[4] ; Align to 16-bytes boundaries, for DMA transfers
 BlackTilemap:
   ds TILEMAP_WIDTH * TILEMAP_HEIGHT, $00 ; all black
@@ -235,7 +240,7 @@ DefaultAttrmapBG1:
 .end
 
 ; -------------------------------------------------------------------------------
-SECTION "Tilesets - frame 1-4", ROMX, BANK[$01]
+SECTION "Tilesets - frame 1-4", ROMX
 
 align 4 ; Align to 16-bytes boundaries, for DMA transfers
 BlackTile:
@@ -263,7 +268,7 @@ Frame4Tiles:
 .end
 
 ; -------------------------------------------------------------------------------
-SECTION "Tilesets - frame 5-6", ROMX, BANK[$02]
+SECTION "Tilesets - frame 5-6", ROMX
 
 align 4
 Frame5Tiles:
@@ -296,25 +301,15 @@ Frame10Tiles:
 .end
 
 ; -------------------------------------------------------------------------------
-SECTION "Palettes - frame 0-3", ROMX, BANK[$03]
+; Palettes
 
 INCLUDE "gfx/1.palettes.asm"
 INCLUDE "gfx/2.palettes.asm"
 INCLUDE "gfx/3.palettes.asm"
-
-; -------------------------------------------------------------------------------
-SECTION "Palettes - frame 4-6", ROMX, BANK[$04]
-
 INCLUDE "gfx/4.palettes.asm"
 INCLUDE "gfx/5.palettes.asm"
 INCLUDE "gfx/6.palettes.asm"
-
-; -------------------------------------------------------------------------------
-SECTION "Palettes - frame 7-8", ROMX, BANK[$05]
 INCLUDE "gfx/7.palettes.asm"
 INCLUDE "gfx/8.palettes.asm"
-
-; -------------------------------------------------------------------------------
-SECTION "Palettes - frame 9-10", ROMX, BANK[$06]
 INCLUDE "gfx/9.palettes.asm"
 INCLUDE "gfx/10.palettes.asm"
