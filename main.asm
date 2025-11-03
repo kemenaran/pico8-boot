@@ -66,11 +66,15 @@ Init:
   ld de, DefaultAttrmapBG0
   ld hl, _SCRN0
   ld bc, ATTRMAP_HEIGHT
+  ld a, BANK(DefaultAttrmapBG0)
+  ld [rROMB0], a
   call CopyAttrmap
 
   ld de, DefaultAttrmapBG1
   ld hl, _SCRN1
   ld bc, ATTRMAP_HEIGHT
+  ld a, BANK(DefaultAttrmapBG1)
+  ld [rROMB0], a
   call CopyAttrmap
 
   ; Load initial BG palettes

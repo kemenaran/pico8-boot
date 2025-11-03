@@ -154,67 +154,56 @@ Frame10:
 
 ; -------------------------------------------------------------------------------
 ; Tilemaps data
+; (aligned to 16-bytes boundaries, for DMA transfers)
 
-; TODO: allow tilemaps outside of bank 1
-SECTION "Tilemaps", ROMX, BANK[$01]
-
-ds align[4] ; Align to 16-bytes boundaries, for DMA transfers
-BlackTilemap:
-  ds TILEMAP_WIDTH * TILEMAP_HEIGHT, $00 ; all black
+SECTION "Tilemap 0", ROMX, ALIGN[4]
+BlackTilemap: ds TILEMAP_WIDTH * TILEMAP_HEIGHT, $00 ; all black
 .end
 
-ds align[4]
-Frame1Tilemap:
-INCBIN "gfx/1.tilemap"
+SECTION "Tilemap 1", ROMX, ALIGN[4]
+Frame1Tilemap: INCBIN "gfx/1.tilemap"
 .end
 
-ds align[4]
-Frame2Tilemap:
-INCBIN "gfx/2.tilemap"
+SECTION "Tilemap 2", ROMX, ALIGN[4]
+Frame2Tilemap: INCBIN "gfx/2.tilemap"
 .end
 
-ds align[4]
-Frame3Tilemap:
-INCBIN "gfx/3.tilemap"
+SECTION "Tilemap 3", ROMX, ALIGN[4]
+Frame3Tilemap: INCBIN "gfx/3.tilemap"
 .end
 
-ds align[4]
-Frame4Tilemap:
-INCBIN "gfx/4.tilemap"
+SECTION "Tilemap 4", ROMX, ALIGN[4]
+Frame4Tilemap: INCBIN "gfx/4.tilemap"
 .end
 
-ds align[4]
-Frame5Tilemap:
-INCBIN "gfx/5.tilemap"
+SECTION "Tilemap 5", ROMX, ALIGN[4]
+Frame5Tilemap: INCBIN "gfx/5.tilemap"
 .end
 
-ds align[4]
-Frame6Tilemap:
-INCBIN "gfx/6.tilemap"
+SECTION "Tilemap 6", ROMX, ALIGN[4]
+Frame6Tilemap: INCBIN "gfx/6.tilemap"
 .end
 
-ds align[4]
-Frame7Tilemap:
-INCBIN "gfx/7.tilemap"
+SECTION "Tilemap 7", ROMX, ALIGN[4]
+Frame7Tilemap: INCBIN "gfx/7.tilemap"
 .end
 
-ds align[4]
-Frame8Tilemap:
-INCBIN "gfx/8.tilemap"
+SECTION "Tilemap 8", ROMX, ALIGN[4]
+Frame8Tilemap: INCBIN "gfx/8.tilemap"
 .end
 
-ds align[4]
-Frame9Tilemap:
-INCBIN "gfx/9.tilemap"
+SECTION "Tilemap 9", ROMX, ALIGN[4]
+Frame9Tilemap: INCBIN "gfx/9.tilemap"
 .end
 
-ds align[4]
-Frame10Tilemap:
-INCBIN "gfx/10.tilemap"
+SECTION "Tilemap 10", ROMX, ALIGN[4]
+Frame10Tilemap: INCBIN "gfx/10.tilemap"
 .end
 
 ; -------------------------------------------------------------------------------
 ; Attrmaps
+
+SECTION "Attrmaps", ROMX
 
 DefaultAttrmapBG0:
   ; First row
@@ -240,64 +229,50 @@ DefaultAttrmapBG1:
 .end
 
 ; -------------------------------------------------------------------------------
-SECTION "Tilesets - frame 1-4", ROMX
-
-align 4 ; Align to 16-bytes boundaries, for DMA transfers
-BlackTile:
-  ds 16, $FF
+; Tilesets
+; (aligned to 16-bytes boundaries, for DMA transfers)
+SECTION "Black tile", ROMX, ALIGN[4]
+BlackTile: ds 16, $FF
 .end
 
-ds align[4]
-Frame1Tiles:
-  INCBIN "gfx/1.tileset.2bpp"
+SECTION "Tiles 1", ROMX, ALIGN[4]
+Frame1Tiles: INCBIN "gfx/1.tileset.2bpp"
 .end
 
-ds align[4]
-Frame2Tiles:
-  INCBIN "gfx/2.tileset.2bpp"
+SECTION "Tiles 2", ROMX, ALIGN[4]
+Frame2Tiles: INCBIN "gfx/2.tileset.2bpp"
 .end
 
-ds align[4]
-Frame3Tiles:
-  INCBIN "gfx/3.tileset.2bpp"
+SECTION "Tiles 3", ROMX, ALIGN[4]
+Frame3Tiles: INCBIN "gfx/3.tileset.2bpp"
 .end
 
-ds align[4]
-Frame4Tiles:
-  INCBIN "gfx/4.tileset.2bpp"
+SECTION "Tiles 4", ROMX, ALIGN[4]
+Frame4Tiles: INCBIN "gfx/4.tileset.2bpp"
 .end
 
-; -------------------------------------------------------------------------------
-SECTION "Tilesets - frame 5-6", ROMX
-
-align 4
-Frame5Tiles:
-  INCBIN "gfx/5.tileset.2bpp"
+SECTION "Tiles 5", ROMX, ALIGN[4]
+Frame5Tiles: INCBIN "gfx/5.tileset.2bpp"
 .end
 
-align 4
-Frame6Tiles:
-  INCBIN "gfx/6.tileset.2bpp"
+SECTION "Tiles 6", ROMX, ALIGN[4]
+Frame6Tiles: INCBIN "gfx/6.tileset.2bpp"
 .end
 
-align 4
-Frame7Tiles:
-  INCBIN "gfx/7.tileset.2bpp"
+SECTION "Tiles 7", ROMX, ALIGN[4]
+Frame7Tiles: INCBIN "gfx/7.tileset.2bpp"
 .end
 
-align 4
-Frame8Tiles:
-  INCBIN "gfx/8.tileset.2bpp"
+SECTION "Tiles 8", ROMX, ALIGN[4]
+Frame8Tiles: INCBIN "gfx/8.tileset.2bpp"
 .end
 
-align 4
-Frame9Tiles:
-  INCBIN "gfx/9.tileset.2bpp"
+SECTION "Tiles 9", ROMX, ALIGN[4]
+Frame9Tiles: INCBIN "gfx/9.tileset.2bpp"
 .end
 
-align 4
-Frame10Tiles:
-  INCBIN "gfx/10.tileset.2bpp"
+SECTION "Tiles 10", ROMX, ALIGN[4]
+Frame10Tiles: INCBIN "gfx/10.tileset.2bpp"
 .end
 
 ; -------------------------------------------------------------------------------
