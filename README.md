@@ -1,5 +1,7 @@
 This code reproduces the pico8 boot animation on a Game boy Color.
 
+<img src="original-gfx/pico8-boot.gif" alt="The pico8 boot animation" width="384" />
+
 Implementation
 ==============
 
